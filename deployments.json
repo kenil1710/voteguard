@@ -3,10 +3,10 @@
   "artifacts": {
     "build/VoteGuard.min.py": {
       "source": "contracts/VoteGuard.py",
-      "bytes": 52552,
-      "sha256": "96a568b53b9ba8df77e3250453d0ff331695c69206da449b3028513eb44027d4",
-      "source_sha256": "971489887752a975b3753a2ee042f7c9a22c258da8b6b98154e18bf4728aab97",
-      "premangle_bytes": 64357
+      "bytes": 52582,
+      "sha256": "f61564fb137b71035b7cfc151c78b93a8ca208bac0fce9d493c767cfeb9558e8",
+      "source_sha256": "f3a7bcd3319fb85d9fea595228f59924892d24362b1401f042bff275fe4ff7c6",
+      "premangle_bytes": 64400
     },
     "build/GovernanceConsumer.min.py": {
       "source": "contracts/GovernanceConsumer.py",
@@ -37,21 +37,15 @@
       "network": "testnet-bradbury",
       "rpc": "https://rpc-bradbury.genlayer.com",
       "VoteGuard": {
-        "address": "0x3EA3b81B4e1e3D2a4834F88D4125Ebf3890315a7",
-        "deploy_tx": "0x8456850afbcc8144a8226759a8893666d988df40016dda29d1fac454b6246345",
-        "artifact_bytes": 52549
+        "address": "0xE6c5C4E24529fd445AEb8083729Ca89773806fa3",
+        "deploy_tx": "0x95ed0777218b217a9a29d695c6fb0b83e1267cbe9a44d2b6788f238326da3b71",
+        "artifact_bytes": 52579
       },
       "owner": "0xC70FF4C06aEcb796ED712029EE548834764c9Fe8",
-      "explorer": "https://explorer-bradbury.genlayer.com/address/0x3EA3b81B4e1e3D2a4834F88D4125Ebf3890315a7",
-      "verified": "genlayer code <addr> is BYTE-IDENTICAL to build/VoteGuard.min.py (sha256 96a568b5…27d4), read back with tools/verify_onchain.py",
+      "explorer": "https://explorer-bradbury.genlayer.com/address/0xE6c5C4E24529fd445AEb8083729Ca89773806fa3",
+      "verified": "genlayer code <addr> is BYTE-IDENTICAL to build/VoteGuard.min.py (sha256 f61564fb…58e8), read back with tools/verify_onchain.py",
       "fee": "set to 0 — the genlayer CLI hardcodes value:0n on writes, so a non-zero fee makes analyze_proposal uncallable from the command line",
-      "GovernanceConsumer": {
-        "address": "0x688734729a3617a51848D3797f0B2440DaDB6d0f",
-        "deploy_tx": "0x793501c9c48619c3119310345484c64b5f8a23d9c376fb7dcaf57a028c63caf9",
-        "artifact_bytes": 11918,
-        "oracle": "0x3EA3b81B4e1e3D2a4834F88D4125Ebf3890315a7",
-        "note": "the oracle is pinned at construction; there is no setter"
-      }
+      "supersedes": "0x3EA3b81B4e1e3D2a4834F88D4125Ebf3890315a7 — redeployed so the chain matches the repository byte for byte after `submitted_url` was restored to the assessment view. That earlier address holds one real assessment ([ARFC] Deploy Aave V4 on Arc, RECOMMEND 75/100, verified true) and is left standing rather than deleted, but it is NOT the build in this repo."
     }
   },
   "tagline": "Every proposal deserves a second opinion.",

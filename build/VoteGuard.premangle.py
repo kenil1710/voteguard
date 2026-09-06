@@ -1324,6 +1324,7 @@ class VoteGuard(gl.Contract):
   "found": True,
   "assessment_id": int(rec.assessment_id),
   "proposal_key": str(rec.proposal_key),
+  "submitted_url": str(rec.submitted_url),
   "source_url": str(rec.source_url),
   "platform": str(rec.platform),
   "dao": str(rec.dao),

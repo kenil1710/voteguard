@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
 import typing
-cQ = 10**16
+cR = 10**16
 bG = 10**17
 au = 300
 aE = 900
@@ -14,24 +14,24 @@ bf = 6
 aG = 600
 fp = 25
 dY = 25
-dA = 20
-dB = 15
+dB = 20
+dC = 15
 eC = 15
-eD = (fp, dY, dA, dB, eC)
+eD = (fp, dY, dB, dC, eC)
 dZ = 5
 aZ = "1.0.0"
 bX = 70
-cG = 45
-dm = 2_000_000
-cR = 4_000_000
+cH = 45
+dn = 2_000_000
+cS = 4_000_000
 et = 4_000_000
-cH = 12_000
+cI = 12_000
 bP = 400
 ea = "https://hub.snapshot.org/graphql?query="
 y = "[EXPECTED]"
 aQ = "[EXTERNAL]"
 al = "[TRANSIENT]"
-cy = "[LLM_ERROR]"
+cz = "[LLM_ERROR]"
 bm = ("snapshot", "tally", "discourse")
 B = ("feasibility", "budget_risk", "centralization_risk", "clarity",
 "alignment")
@@ -43,7 +43,7 @@ eE = (
 ("CLEAR", "ADEQUATE", "VAGUE", "AMBIGUOUS"),
 ("ALIGNED", "NEUTRAL", "QUESTIONABLE", "MISALIGNED"),
 )
-dC = ((85, 100), (60, 84), (30, 59), (0, 29))
+dD = ((85, 100), (60, 84), (30, 59), (0, 29))
 gI = (100, 75, 40, 10)
 eb = ("RECOMMEND", "CAUTION", "OPPOSE")
 eO = ("UNCHECKED_AUTHORITY", "UNSTATED_AMOUNT", "PLACEHOLDER_TERMS",
@@ -54,11 +54,11 @@ eO = ("UNCHECKED_AUTHORITY", "UNSTATED_AMOUNT", "PLACEHOLDER_TERMS",
 eP = (400, 1_200, 4_000, 10_000)
 fq = ("<400", "400-1.2K", "1.2K-4K", "4K-10K", ">10K")
 eQ = (10_000, 100_000, 1_000_000, 10_000_000, 100_000_000, 1_000_000_000)
-dD = ("<10K", "10K-100K", "100K-1M", "1M-10M", "10M-100M", "100M-1B",
+dE = ("<10K", "10K-100K", "100K-1M", "1M-10M", "10M-100M", "100M-1B",
 ">=1B")
 ec = (1, 3, 8)
 ed = (1, 4, 10)
-dn = (2, 3, 6)
+do = (2, 3, 6)
 K = (
 ("plen", 4), ("sect", 5), ("struct", 4),
 ("amt", 6), ("items", 3), ("unit", 41), ("fund", 1), ("sched", 1),
@@ -68,11 +68,11 @@ K = (
 ("plat", 2), ("choices", 3),
 ("mfeas", 4), ("mbud", 4), ("mcen", 4), ("mcla", 4), ("mali", 4),
 )
-dM = ("summary", "motivation", "specification", "rationale",
+dN = ("summary", "motivation", "specification", "rationale",
 "abstract", "background", "implementation", "timeline",
 "budget", "risk", "next steps", "deliverable", "milestone",
 "scope")
-cS = ("request for", "requests ", "requesting ", "we request",
+cT = ("request for", "requests ", "requesting ", "we request",
 "amount requested", "total budget", "budget request",
 "budget of", "funding request", "funds requested",
 "requested amount", "grant of", "grant to", "allocate ",
@@ -122,14 +122,14 @@ bJ = ("USDC", "USDT", "USDS", "DAI", "GHO", "FRAX", "WSTETH", "STETH",
 "WETH", "ETH", "WBTC", "CBBTC", "BTC", "ARB", "OP", "UNI", "AAVE",
 "ENS", "LDO", "BAL", "GTC", "MKR", "COMP", "CRV", "USD", "EUR",
 "GBP", "DOLLARS", "TOKENS")
-cT = "$€£"
+cU = "$€£"
 bY = 41
 ew = (("BN", 1_000_000_000), ("B", 1_000_000_000),
 ("MM", 1_000_000), ("M", 1_000_000), ("K", 1_000))
 aM = 400
 O = 60
-ce = 200
-def cz(s: str) -> str:
+cf = 200
+def cA(s: str) -> str:
  return " ".join(str(s).split())
 def aa(s: str, n: int = 120) -> str:
  s = str(s)
@@ -150,7 +150,7 @@ def gJ(s: str, fs: str, gK: str) -> str:
    return m + bH
   m = m + bH[:i] + gK
   bH = bH[i + len(fs):]
-def cU(n: int, go: tuple) -> int:
+def cV(n: int, go: tuple) -> int:
  r = 0
  for t in go:
   if n >= t:
@@ -171,8 +171,8 @@ def D(s: typing.Any, n: int) -> str:
    m.append(ch)
   else:
    m.append(" ")
- return cz(cz("".join(m))[:n])
-def cf(s: str) -> str:
+ return cA(cA("".join(m))[:n])
+def cg(s: str) -> str:
  m = by(str(s), "<<<UNTRUSTED_PROPOSAL>>>")
  m = by(m, "<<<END_UNTRUSTED_PROPOSAL>>>")
  m = by(m, "<")
@@ -184,27 +184,27 @@ def gV(s: str) -> str:
   h = h ^ b
   h = (h * 0x100000001B3) & 0xFFFFFFFFFFFFFFFF
  return str(len(s)) + ":" + format(h, "016x")
-def ft(cM: dict) -> str:
+def ft(cN: dict) -> str:
  m = {}
  for E, gp in K:
-  m[E] = int(cM.get(E, 0))
+  m[E] = int(cN.get(E, 0))
  return json.dumps(m, sort_keys=True, separators=(",", ":"))
-def cA(E: str, cM: dict) -> str:
- return gV(str(E) + "|" + ft(cM))
+def cB(E: str, cN: dict) -> str:
+ return gV(str(E) + "|" + ft(cN))
 eW = "abcdefghijklmnopqrstuvwxyz0123456789-."
 fu = "abcdefghijklmnopqrstuvwxyz0123456789-_"
 hg = "0123456789abcdef"
 bz = "0123456789"
-do = ("snapshot.org", "www.snapshot.org", "snapshot.box",
+dp = ("snapshot.org", "www.snapshot.org", "snapshot.box",
 "www.snapshot.box")
 ey = ("tally.xyz", "www.tally.xyz")
-cV = (".local", ".internal", ".localhost", ".lan", ".home",
+cW = (".local", ".internal", ".localhost", ".lan", ".home",
 ".corp", ".intranet")
-dp = ("localhost", "metadata.google.internal", "instance-data")
+dq = ("localhost", "metadata.google.internal", "instance-data")
 def aR(s: str) -> str:
  return str(s).lower()
-def dO(cI: str) -> tuple:
- u = cz(cI)
+def dP(cJ: str) -> tuple:
+ u = cA(cJ)
  if aR(u).startswith("https://"):
   return "https", u[8:]
  return "", u
@@ -229,9 +229,9 @@ def ef(aK: str) -> bool:
     eF = False
  if eF:
   return False
- if h in dp:
+ if h in dq:
   return False
- for hh in cV:
+ for hh in cW:
   if h.endswith(hh):
    return False
  return True
@@ -243,7 +243,7 @@ def eX(s: str) -> bool:
   if ch not in hg:
    return False
  return True
-def cW(s: str, aS: int) -> bool:
+def cX(s: str, aS: int) -> bool:
  if s == "" or len(s) > aS:
   return False
  for ch in s:
@@ -258,38 +258,38 @@ def eY(s: str) -> str:
   ch = chr(gq)
   m.append(ch if ch in gW else "%" + format(gq, "02X"))
  return "".join(m)
-def cX(eg: str) -> str:
+def cY(eg: str) -> str:
  return ('{proposal(id:"' + eg + '"){id ipfs title body discussion choices '
             'start end created author type space{id name}}}')
 def ay(X: str) -> dict:
- cI = cz(X)
- if cI == "":
+ cJ = cA(X)
+ if cJ == "":
   raise gl.vm.UserError(y + " proposal url is empty")
- if len(cI) > aM:
+ if len(cJ) > aM:
   raise gl.vm.UserError(y + " url is longer than "
   + str(aM) + " characters")
- if cI.find(" ") >= 0:
+ if cJ.find(" ") >= 0:
   raise gl.vm.UserError(y + " url contains a space")
- gr, bH = dO(cI)
+ gr, bH = dP(cJ)
  if gr == "":
   raise gl.vm.UserError(y + " url must start with https://")
  dU = bH.find("/")
- cg = bH if dU < 0 else bH[:dU]
+ ci = bH if dU < 0 else bH[:dU]
  bQ = "" if dU < 0 else bH[dU:]
- if cg.find("@") >= 0:
+ if ci.find("@") >= 0:
   raise gl.vm.UserError(y + " url may not carry credentials")
- if cg.find(":") >= 0:
+ if ci.find(":") >= 0:
   raise gl.vm.UserError(y + " url may not name a port")
- aK = aR(cg)
+ aK = aR(ci)
  if not ef(aK):
   raise gl.vm.UserError(y + " not a valid host: "
   + aa(aK, 60))
- if aK in do:
-  return cY(bQ)
+ if aK in dp:
+  return cZ(bQ)
  if aK in ey:
   return eh(bQ)
- return cN(aK, bQ)
-def cY(bQ: str) -> dict:
+ return cO(aK, bQ)
+def cZ(bQ: str) -> dict:
  eZ = bQ
  eG = eZ.find("#")
  if eG >= 0:
@@ -303,28 +303,28 @@ def cY(bQ: str) -> dict:
   raise gl.vm.UserError(y + " snapshot url has no 0x "
                               "proposal id")
  return {"platform": "snapshot", "key": "snapshot:" + eg,
- "fetch": ea + eY(cX(eg)),
+ "fetch": ea + eY(cY(eg)),
  "ref": eg}
 def eh(bQ: str) -> dict:
  ab = [p for p in bQ.split("/") if p != ""]
  q = ab[-1].find("?") if len(ab) > 0 else -1
  if len(ab) >= 4 and aR(ab[0]) == "gov" and aR(ab[2]) == "proposal":
-  cJ = aR(ab[1])
+  cK = aR(ab[1])
   ei = ab[3]
   if q >= 0 and len(ab) == 4:
    ei = ei[:ei.find("?")]
-  ok = cJ != "" and len(cJ) <= 60
-  for ch in cJ:
+  ok = cK != "" and len(cK) <= 60
+  for ch in cK:
    if ch not in fu:
     ok = False
-  if ok and cW(ei, 80):
-   return {"platform": "tally", "key": "tally:" + cJ + ":" + ei,
-   "fetch": "https://www.tally.xyz/gov/" + cJ
+  if ok and cX(ei, 80):
+   return {"platform": "tally", "key": "tally:" + cK + ":" + ei,
+   "fetch": "https://www.tally.xyz/gov/" + cK
    + "/proposal/" + ei,
-   "ref": cJ + "#" + ei}
+   "ref": cK + "#" + ei}
  raise gl.vm.UserError(y + " tally url must be "
                           "/gov/<org>/proposal/<number>")
-def cN(aK: str, bQ: str) -> dict:
+def cO(aK: str, bQ: str) -> dict:
  ab = [p for p in bQ.split("/") if p != ""]
  fX = -1
  for i in range(len(ab)):
@@ -337,13 +337,13 @@ def cN(aK: str, bQ: str) -> dict:
  eH = ""
  for gL in ab[fX + 1:]:
   p = gL
-  dE = p.find(".")
-  if dE >= 0:
-   p = p[:dE]
+  dF = p.find(".")
+  if dF >= 0:
+   p = p[:dF]
   qm = p.find("?")
   if qm >= 0:
    p = p[:qm]
-  if cW(p, 12) and eH == "":
+  if cX(p, 12) and eH == "":
    if len(p) >= 1:
     eH = p
  if eH == "":
@@ -352,37 +352,37 @@ def cN(aK: str, bQ: str) -> dict:
  return {"platform": "discourse", "key": "discourse:" + aK + ":" + eH,
  "fetch": "https://" + aK + "/t/" + eH + ".json",
  "ref": aK + "#" + eH}
-def gf(cK: typing.Any) -> int:
- s = getattr(cK, "status_code", None)
+def gf(cL: typing.Any) -> int:
+ s = getattr(cL, "status_code", None)
  if s is None:
-  s = getattr(cK, "status", None)
+  s = getattr(cL, "status", None)
  if s is None:
   return 0
  return int(s)
-def fv(cK: typing.Any) -> str:
- b = getattr(cK, "body", None)
+def fv(cL: typing.Any) -> str:
+ b = getattr(cL, "body", None)
  if b is None:
-  b = getattr(cK, "text", None)
+  b = getattr(cL, "text", None)
  if b is None:
   return ""
  if isinstance(b, bytes):
   return b.decode("utf-8", errors="ignore")
  return str(b)
-def gs(cI: str, aS: int) -> str:
- cK = gl.nondet.web.request(cI, method="GET")
- st = gf(cK)
+def gs(cJ: str, aS: int) -> str:
+ cL = gl.nondet.web.request(cJ, method="GET")
+ st = gf(cL)
  if st >= 500 or st == 0 or st == 429:
   raise gl.vm.UserError(al + " http " + str(st))
  if st >= 400:
   raise gl.vm.UserError(aQ + " http " + str(st))
- X = fv(cK)
+ X = fv(cL)
  if len(X) > aS:
   raise gl.vm.UserError(
   aQ + " document is " + str(len(X))
   + " bytes, over the " + str(aS) + " byte cap")
  return X
-def dF(cI: str, aS: int) -> dict:
- X = gs(cI, aS)
+def dG(cJ: str, aS: int) -> dict:
+ X = gs(cJ, aS)
  try:
   m = json.loads(X)
  except ValueError:
@@ -391,20 +391,20 @@ def dF(cI: str, aS: int) -> dict:
   raise gl.vm.UserError(aQ + " unexpected json shape")
  return m
 def fa(aD: typing.Any, gX: str) -> typing.Any:
- dG = aD
+ dH = aD
  for fJ in [s for s in str(gX).split(".") if s != ""]:
-  if isinstance(dG, list):
+  if isinstance(dH, list):
    try:
-    dG = dG[int(fJ)]
+    dH = dH[int(fJ)]
    except (ValueError, IndexError):
     return None
-  elif isinstance(dG, dict):
-   if fJ not in dG:
+  elif isinstance(dH, dict):
+   if fJ not in dH:
     return None
-   dG = dG[fJ]
+   dH = dH[fJ]
   else:
    return None
- return dG
+ return dH
 fK = (("&lt;", "<"), ("&gt;", ">"), ("&quot;", '"'), ("&#39;", "'"),
 ("&apos;", "'"), ("&nbsp;", " "), ("&mdash;", "-"),
 ("&ndash;", "-"), ("&hellip;", "..."), ("&amp;", "&"))
@@ -448,13 +448,13 @@ def fb(gY: str) -> str:
  for hm, hn in fK:
   text = gJ(text, hm, hn)
  return text
-def fL(N: str, body: str, cZ: str, bn: str, H: str,
-gZ: str, gh: int, da: str, gt: str) -> dict:
- return {"title": N, "body": body, "author": cZ, "dao": bn,
+def fL(N: str, body: str, da: str, bn: str, H: str,
+gZ: str, gh: int, db: str, gt: str) -> dict:
+ return {"title": N, "body": body, "author": da, "dao": bn,
  "dao_id": H, "kind": gZ, "choices": gh,
- "anchor": da, "source": gt}
-def dQ(A: dict) -> dict:
- aD = dF(str(A["fetch"]), dm)
+ "anchor": db, "source": gt}
+def dR(A: dict) -> dict:
+ aD = dG(str(A["fetch"]), dn)
  p = fa(aD, "data.proposal")
  if p is None or not isinstance(p, dict):
   raise gl.vm.UserError(y + " no such proposal on Snapshot")
@@ -483,14 +483,14 @@ def fe(A: dict) -> dict:
  if not isinstance(p, dict):
   raise gl.vm.UserError(y + " no such proposal on Tally")
  md = p.get("metadata") or {}
- cJ = (p.get("governor") or {}).get("organization") or {}
+ cK = (p.get("governor") or {}).get("organization") or {}
  return fL(str(md.get("title") or ""), str(md.get("description") or ""),
  str((p.get("proposer") or {}).get("address") or ""),
- str(cJ.get("name") or ""),
- str(cJ.get("slug") or cJ.get("name") or ""),
+ str(cK.get("name") or ""),
+ str(cK.get("slug") or cK.get("name") or ""),
  "onchain", 3, str(p.get("id") or ""), str(A["fetch"]))
-def dq(A: dict) -> dict:
- aD = dF(str(A["fetch"]), cR)
+def dr(A: dict) -> dict:
+ aD = dG(str(A["fetch"]), cS)
  dV = fa(aD, "post_stream.posts")
  if not isinstance(dV, list) or len(dV) == 0:
   raise gl.vm.UserError(y + " that forum topic has no posts")
@@ -505,11 +505,11 @@ def dq(A: dict) -> dict:
 def fg(A: dict) -> dict:
  ej = str(A["platform"])
  if ej == "snapshot":
-  return dQ(A)
+  return dR(A)
  if ej == "tally":
   return fe(A)
- return dq(A)
-def cB(s: str) -> str:
+ return dr(A)
+def cC(s: str) -> str:
  m = []
  for ch in str(s).lower():
   if ch in "*_`~#>|[]()":
@@ -518,37 +518,37 @@ def cB(s: str) -> str:
    m.append(" ")
   else:
    m.append(ch)
- return cz("".join(m))
+ return cA("".join(m))
 def ao(ad: str, fh: tuple) -> int:
  for w in fh:
   if ad.find(w) >= 0:
    return 1
  return 0
 def fw(ad: str, fh: tuple) -> int:
- dr = 0
+ ds = 0
  for w in fh:
   if ad.find(w) >= 0:
-   dr = dr + 1
- return dr
-def ek(db: str) -> int:
- body = by(db, ",")
- dE = body.find(".")
- if dE >= 0:
-  body = body[:dE]
+   ds = ds + 1
+ return ds
+def ek(dc: str) -> int:
+ body = by(dc, ",")
+ dF = body.find(".")
+ if dF >= 0:
+  body = body[:dF]
  if body == "" or len(body) > 18:
   return -1
  for ch in body:
   if ch not in bz:
    return -1
  return int(body)
-def dR(text: str) -> tuple:
+def dS(text: str) -> tuple:
  W = str(text)
  up = W.upper()
  hp = W.lower()
  n = len(W)
  fM = 0
- dH = 0
- dr = {}
+ dI = 0
+ ds = {}
  i = 0
  while i < n:
   if W[i] not in bz:
@@ -564,8 +564,8 @@ def dR(text: str) -> tuple:
    i = i + 1
   while i > bh and W[i - 1] in ",.":
    i = i - 1
-  db = W[bh:i]
-  value = ek(db)
+  dc = W[bh:i]
+  value = ek(dc)
   if value < 0:
    continue
   if i < n and W[i] == "%":
@@ -575,36 +575,36 @@ def dR(text: str) -> tuple:
   j = bh - 1
   if j >= 0 and W[j] == " ":
    j = j - 1
-  el = j >= 0 and W[j] in cT
+  el = j >= 0 and W[j] in cU
   k = i
   if k < n and W[k] == " ":
    k = k + 1
   fi = 1
-  for ci, gy in ew:
-   if up[k:k + len(ci)] == ci:
-    cC = up[k + len(ci):k + len(ci) + 1]
-    if cC == "" or not (cC.isalnum() or cC == "-"):
+  for cj, gy in ew:
+   if up[k:k + len(cj)] == cj:
+    cD = up[k + len(cj):k + len(cj) + 1]
+    if cD == "" or not (cD.isalnum() or cD == "-"):
      fi = gy
-     k = k + len(ci)
+     k = k + len(cj)
      break
   if k < n and W[k] == " ":
    k = k + 1
-  cj = ""
+  ck = ""
   for t in bJ:
    if up[k:k + len(t)] == t:
-    cC = up[k + len(t):k + len(t) + 1]
-    if cC == "" or not cC.isalnum():
-     if len(t) > len(cj):
-      cj = t
-  if not el and cj == "":
+    cD = up[k + len(t):k + len(t) + 1]
+    if cD == "" or not cD.isalnum():
+     if len(t) > len(ck):
+      ck = t
+  if not el and ck == "":
    continue
   hb = hp[max(0, bh - 160):min(n, i + 90)]
-  if not ao(hb, cS):
+  if not ao(hb, cT):
    continue
   M = value * fi
-  dE = db.find(".")
-  if dE >= 0 and fi > 1:
-   hc = db[dE + 1:]
+  dF = dc.find(".")
+  if dF >= 0 and fi > 1:
+   hc = dc[dF + 1:]
    bK = ""
    for ch in hc:
     if ch in bz:
@@ -613,13 +613,13 @@ def dR(text: str) -> tuple:
     M = M + (int(bK) * fi) // (10 ** len(bK))
   if M <= 0:
    continue
-  dr[str(M)] = True
+  ds[str(M)] = True
   if M > fM:
    fM = M
-   dH = (bJ.index(cj) + 1 if cj in bJ
+   dI = (bJ.index(ck) + 1 if ck in bJ
    else (bY if el else 0))
- return fM, len(dr), dH
-def ck(text: str) -> int:
+ return fM, len(ds), dI
+def cl(text: str) -> int:
  bi = 0
  ad = str(text).lower()
  at = 0
@@ -629,12 +629,12 @@ def ck(text: str) -> int:
    return bi
   bi = bi + 1
   at = at + 4
-def ds(aD: dict, ba: str, f: dict) -> None:
+def dt(aD: dict, ba: str, f: dict) -> None:
  body = str(aD.get("body") or "")
  N = str(aD.get("title") or "")
- ad = cB(N + " " + body)
- f["plen"] = cU(len(body), eP)
- f["sect"] = P(fw(ad, dM), 0, 5)
+ ad = cC(N + " " + body)
+ f["plen"] = cV(len(body), eP)
+ f["sect"] = P(fw(ad, dN), 0, 5)
  aT = 0
  if body.find("#") >= 0 or body.find("<h") >= 0:
   aT = aT + 1
@@ -642,14 +642,14 @@ def ds(aD: dict, ba: str, f: dict) -> None:
   aT = aT + 1
  if body.find("|") >= 0:
   aT = aT + 1
- if ck(body) > 0:
+ if cl(body) > 0:
   aT = aT + 1
  f["struct"] = aT
- eJ, fN, dt = dR(N + " " + body)
- f["amt"] = cU(eJ, eQ)
- f["items"] = cU(fN, ec)
- f["unit"] = dt
- f["fund"] = 1 if (ao(ad, cS) or eJ > 0) else 0
+ eJ, fN, du = dS(N + " " + body)
+ f["amt"] = cV(eJ, eQ)
+ f["items"] = cV(fN, ec)
+ f["unit"] = du
+ f["fund"] = 1 if (ao(ad, cT) or eJ > 0) else 0
  f["sched"] = ao(ad, eu)
  f["claw"] = ao(ad, eR)
  f["msig"] = ao(ad, eS)
@@ -660,10 +660,10 @@ def ds(aD: dict, ba: str, f: dict) -> None:
  f["addr"] = 1 if (body.lower().find("0x") >= 0
  or ad.find(".eth") >= 0) else 0
  f["tbd"] = ao(ad, fr)
- f["links"] = cU(ck(body), ed)
+ f["links"] = cV(cl(body), ed)
  f["plat"] = bm.index(ba) if ba in bm else 0
- f["choices"] = cU(int(aD.get("choices") or 0), dn)
-def cd(f: dict) -> tuple:
+ f["choices"] = cV(int(aD.get("choices") or 0), do)
+def ce(f: dict) -> tuple:
  lo, hi = 0, 3
  if f["tbd"]:
   lo = 2
@@ -672,7 +672,7 @@ def cd(f: dict) -> tuple:
  if f["sect"] >= 4 and f["struct"] >= 3 and f["dates"]:
   hi = 2
  return lo, min(hi, 3)
-def du(f: dict) -> tuple:
+def dv(f: dict) -> tuple:
  if not f["fund"]:
   return 0, 0
  lo, hi = 0, 3
@@ -701,7 +701,7 @@ def bI(f: dict) -> tuple:
  if lo > hi:
   hi = lo
  return lo, hi
-def dc(f: dict) -> tuple:
+def dd(f: dict) -> tuple:
  lo, hi = 0, 3
  if f["plen"] == 0:
   lo = 2
@@ -714,24 +714,24 @@ def dc(f: dict) -> tuple:
  if lo > hi:
   hi = lo
  return lo, hi
-def cF(f: dict) -> tuple:
+def cG(f: dict) -> tuple:
  lo, hi = 0, 3
  if f["param"] and not f["fund"]:
   hi = 1
  return lo, hi
-fx = (cd, du, bI,
-dc, cF)
+fx = (ce, dv, bI,
+dd, cG)
 ag = 4
-def em(dv: int) -> int:
- if dv >= 70:
+def em(dw: int) -> int:
+ if dw >= 70:
   return 0
- if dv >= 40:
+ if dw >= 40:
   return 1
- if dv >= 15:
+ if dw >= 15:
   return 2
  return 3
 def fy(f: dict) -> list:
- fO = cl(f)
+ fO = cm(f)
  m = []
  for i in range(5):
   lo, hi = fx[i](f)
@@ -740,7 +740,7 @@ def fy(f: dict) -> list:
    X = max(1, em(fO[i]))
   m.append(P(X, lo, hi))
  return m
-def cl(f: dict) -> list:
+def cm(f: dict) -> list:
  hd = (30 * P(f["sect"] * 20, 0, 100)
  + 25 * P(f["struct"] * 25, 0, 100)
  + 20 * (100 if f["dates"] else 0)
@@ -764,22 +764,22 @@ def cl(f: dict) -> list:
  + 20 * P(f["plen"] * 25, 0, 100)
  + 15 * (0 if f["tbd"] else 100)
  + 10 * P(f["links"] * 34, 0, 100)) // 100
- dd = 55
+ de = 55
  if f["sect"] >= 3:
-  dd = dd + 15
+  de = de + 15
  if f["links"] >= 1:
-  dd = dd + 15
+  de = de + 15
  if f["param"] and not f["fund"]:
-  dd = dd + 15
- dd = P(dd, 0, 100)
- return [hd, gR, fz, hq, dd]
-def cm(f: dict) -> int:
+  de = de + 15
+ de = P(de, 0, 100)
+ return [hd, gR, fz, hq, de]
+def cn(f: dict) -> int:
  n = 0
  for k in Z:
   if int(f[k]) >= ag:
    n = n + 1
  return n
-def gA(f: dict, cn: list) -> list:
+def gA(f: dict, co: list) -> list:
  m = []
  if f["sole"] and not f["revoke"]:
   m.append("UNCHECKED_AUTHORITY")
@@ -791,7 +791,7 @@ def gA(f: dict, cn: list) -> list:
   m.append("LARGE_LUMP_SUM")
  if f["param"] and f["sole"]:
   m.append("VOTING_PARAMS_AT_RISK")
- if cm(f) >= 3:
+ if cn(f) >= 3:
   m.append("MODEL_ABSTAINED")
  if f["plen"] == 0:
   m.append("VERY_SHORT")
@@ -810,15 +810,15 @@ def gA(f: dict, cn: list) -> list:
  if not f["dates"]:
   m.append("NO_TIMELINE")
  return m
-def fP(eK: int, cn: list, bj: int) -> str:
+def fP(eK: int, co: list, bj: int) -> str:
  dW = 0
- for o in cn:
+ for o in co:
   if o == 3:
    dW = dW + 1
  if dW >= 2:
   return "OPPOSE"
  fQ = ("RECOMMEND" if eK >= bX
- else ("CAUTION" if eK >= cG else "OPPOSE"))
+ else ("CAUTION" if eK >= cH else "OPPOSE"))
  if fQ == "RECOMMEND" and dW >= 1:
   return "CAUTION"
  if fQ == "RECOMMEND" and bj >= 3:
@@ -831,47 +831,47 @@ def eA(f: dict, bj: int) -> str:
  and bj == 0):
   return "HIGH"
  return "MEDIUM"
-def de(f: dict) -> dict:
- cn = fy(f)
- fO = cl(f)
+def df(f: dict) -> dict:
+ co = fy(f)
+ fO = cm(f)
  m = {}
  bb = []
  for i in range(5):
-  lo, hi = dC[cn[i]]
+  lo, hi = dD[co[i]]
   bb.append(gQ(lo + (hi - lo) * fO[i] // 100))
   m[B[i]] = bb[i]
  m["overall"] = gQ((bb[0] * fp + bb[1] * dY
- + bb[2] * dA + bb[3] * dB
+ + bb[2] * dB + bb[3] * dC
  + bb[4] * eC) // 100)
- m["ordinals"] = cn
- m["labels"] = [eE[i][cn[i]] for i in range(5)]
- m["abstentions"] = cm(f)
- m["flags"] = gA(f, cn)
- m["verdict"] = fP(m["overall"], cn, m["abstentions"])
+ m["ordinals"] = co
+ m["labels"] = [eE[i][co[i]] for i in range(5)]
+ m["abstentions"] = cn(f)
+ m["flags"] = gA(f, co)
+ m["verdict"] = fP(m["overall"], co, m["abstentions"])
  m["confidence"] = eA(f, m["abstentions"])
  return m
 def gB(f: dict) -> dict:
- dt = int(f["unit"])
- if dt == bY:
+ du = int(f["unit"])
+ if du == bY:
   bc = "fiat"
- elif dt >= 1 and dt <= len(bJ):
-  bc = bJ[dt - 1]
+ elif du >= 1 and du <= len(bJ):
+  bc = bJ[du - 1]
  else:
   bc = ""
  return {
  "length": fq[f["plen"]],
- "largest_amount": dD[f["amt"]] if f["fund"] else "none",
+ "largest_amount": dE[f["amt"]] if f["fund"] else "none",
  "amount_unit": bc,
  "platform": bm[f["plat"]],
  }
-def co(fA: str, bn: str, H: str) -> bool:
- a = cB(fA)
+def cp(fA: str, bn: str, H: str) -> bool:
+ a = cC(fA)
  if a == "":
   return True
  for ch in " .-_":
   a = by(a, ch)
  for bo in (bn, H):
-  b = cB(bo)
+  b = cC(bo)
   for ch in " .-_":
    b = by(b, ch)
   if b == "":
@@ -912,13 +912,13 @@ gC = (
     "   proposer\n"
     " 3 unrelated to the DAO's purpose, or serves a competitor\n"
 )
-cp = 28
-cq = 220
+cq = 28
+cr = 220
 eB = (220, 160, 120, 96, 72, 56, 40, 28)
-def cr(ad: str, dX: str) -> int:
+def cs(ad: str, dX: str) -> int:
  q = str(dX)
  h = str(ad)
- if len(q) < cp or h == "":
+ if len(q) < cq or h == "":
   return 0
  for fj in eB:
   if fj > len(q):
@@ -927,10 +927,10 @@ def cr(ad: str, dX: str) -> int:
    if h.find(q[gS:gS + fj]) >= 0:
     return fj
  return 0
-def cL(body: str) -> str:
- return cf(aa(str(body), cH))
+def cM(body: str) -> str:
+ return cg(aa(str(body), cI))
 def gD(N: str, bn: str, body: str) -> tuple:
- text = cL(body)
+ text = cM(body)
  gE = (
  "Apply a FIXED rubric to a DAO governance proposal. This is not an\n"
         "opinion: for each dimension walk the ladder from 0 and return the\n"
@@ -946,8 +946,8 @@ def gD(N: str, bn: str, body: str) -> tuple:
         '"budget":n,"budget_q":"...","centralization":n,'
         '"centralization_q":"...","clarity":n,"clarity_q":"...",'
         '"alignment":n,"alignment_q":"..."}\n'
-        "DAO: " + cf(aa(str(bn), 80)) + "\n"
-        "TITLE: " + cf(aa(str(N), 200)) + "\n"
+        "DAO: " + cg(aa(str(bn), 80)) + "\n"
+        "TITLE: " + cg(aa(str(N), 200)) + "\n"
         "<<<UNTRUSTED_PROPOSAL>>>\n" + text
  + "\n<<<END_UNTRUSTED_PROPOSAL>>>"
  )
@@ -958,10 +958,10 @@ def gD(N: str, bn: str, body: str) -> tuple:
   try:
    m = json.loads(m[a:z + 1]) if a >= 0 and z > a else {}
   except ValueError:
-   raise gl.vm.UserError(cy + " unparseable reply")
+   raise gl.vm.UserError(cz + " unparseable reply")
  if not isinstance(m, dict):
-  raise gl.vm.UserError(cy + " non-dict reply")
- ad = cB(text)
+  raise gl.vm.UserError(cz + " non-dict reply")
+ ad = cC(text)
  aH = []
  J = []
  for bc in ("feasibility", "budget", "centralization", "clarity",
@@ -969,12 +969,12 @@ def gD(N: str, bn: str, body: str) -> tuple:
   X = m.get(bc)
   if isinstance(X, str) and len(X.strip()) == 1 and X.strip() in "0123":
    X = int(X.strip())
-  dX = cB(str(m.get(bc + "_q", "")))[:cq]
+  dX = cC(str(m.get(bc + "_q", "")))[:cr]
   if isinstance(X, bool) or not isinstance(X, int) or X < 0 or X > 3:
    aH.append(ag)
    J.append("")
    continue
-  if cr(ad, dX) == 0:
+  if cs(ad, dX) == 0:
    aH.append(ag)
    J.append("")
    continue
@@ -997,21 +997,21 @@ def fk(ad: str, aH: list, J: list) -> bool:
   if fB < 0 or fB > 3:
    return False
   q = str(J[i])
-  if len(q) < cp or len(q) > cq:
+  if len(q) < cq or len(q) > cr:
    return False
-  if cr(ad, q) == 0:
+  if cs(ad, q) == 0:
    return False
  return True
 def cb(A: dict) -> tuple:
  aD = fg(A)
  body = str(aD.get("body") or "")
- N = D(aD.get("title"), ce)
- if len(cz(body)) < 40:
+ N = D(aD.get("title"), cf)
+ if len(cA(body)) < 40:
   raise gl.vm.UserError(y + " proposal has no readable body")
  f = {}
  for aU, gp in K:
   f[aU] = 0
- ds(aD, str(A["platform"]), f)
+ dt(aD, str(A["platform"]), f)
  aH, J = gD(N, str(aD.get("dao") or ""), body)
  for i in range(5):
   f[Z[i]] = aH[i]
@@ -1025,10 +1025,10 @@ def cb(A: dict) -> tuple:
  "excerpt": D(body, bP),
  "anchor": D(aD.get("anchor"), 80),
  "source": D(aD.get("source"), aM),
- "scores": de(f),
- "hash": cA(str(A["key"]), f),
+ "scores": df(f),
+ "hash": cB(str(A["key"]), f),
  }
- return aN, cB(cL(body))
+ return aN, cC(cM(body))
 def en(A: dict) -> dict:
  return cb(A)[0]
 def fC(aN: typing.Any, E: str) -> bool:
@@ -1046,7 +1046,7 @@ def fC(aN: typing.Any, E: str) -> bool:
    return False
   if v < 0 or v > hi:
    return False
- for bc, aS in (("title", ce), ("dao", O),
+ for bc, aS in (("title", cf), ("dao", O),
  ("dao_id", O), ("author", 60),
  ("excerpt", bP), ("anchor", 80),
  ("source", aM)):
@@ -1055,7 +1055,7 @@ def fC(aN: typing.Any, E: str) -> bool:
    return False
  if str(aN.get("title", "")) == "":
   return False
- bR = de(aj)
+ bR = df(aj)
  for k in B:
   if int(C.get(k, -1)) != bR[k]:
    return False
@@ -1068,7 +1068,7 @@ def fC(aN: typing.Any, E: str) -> bool:
  for i in range(5):
   if str(la[i]) != bR["labels"][i]:
    return False
- return str(aN.get("hash", "")) == cA(E, aj)
+ return str(aN.get("hash", "")) == cB(E, aj)
 def gi(fl: typing.Any, bR: typing.Any, ad: str) -> bool:
  if not isinstance(fl, dict) or not isinstance(bR, dict):
   return False
@@ -1101,22 +1101,22 @@ def gi(fl: typing.Any, bR: typing.Any, ad: str) -> bool:
    if fZ > 1:
     return False
  return True
-def bS(cK: typing.Any, A: dict) -> bool:
- dw = getattr(cK, "message", "")
- if not isinstance(dw, str):
-  dw = str(dw)
+def bS(cL: typing.Any, A: dict) -> bool:
+ dx = getattr(cL, "message", "")
+ if not isinstance(dx, str):
+  dx = str(dx)
  try:
   en(A)
   return False
  except gl.vm.UserError as e:
-  cs = getattr(e, "message", "")
-  if not isinstance(cs, str) or cs == "":
-   cs = str(e)
-  if cs.startswith(y) or cs.startswith(aQ):
-   return cs == dw
-  if cs.startswith(al) and al in dw:
+  ct = getattr(e, "message", "")
+  if not isinstance(ct, str) or ct == "":
+   ct = str(e)
+  if ct.startswith(y) or ct.startswith(aQ):
+   return ct == dx
+  if ct.startswith(al) and al in dx:
    return True
-  if cs.startswith(cy) and cy in dw:
+  if ct.startswith(cz) and cz in dx:
    return True
   return False
  except Exception:
@@ -1126,16 +1126,16 @@ def bS(cK: typing.Any, A: dict) -> bool:
 class Assessment:
  g: u32
  aV: str
- dS: str
+ cc: str
  bT: str
  ba: str
  bn: str
  H: str
  br: str
  N: str
- cZ: str
- eL: str
  da: str
+ eL: str
+ db: str
  aF: u32
  bA: u32
  ak: u32
@@ -1144,12 +1144,12 @@ class Assessment:
  Y: u32
  ae: str
  V: str
- df: str
+ dg: str
  bu: str
  bB: str
  bC: str
  J: str
- dg: str
+ dh: str
  ap: u64
  eM: Address
  bL: u32
@@ -1160,7 +1160,7 @@ class ProposalFeed:
  N: str
  H: str
  az: DynArray[Assessment]
- ct: u32
+ cu: u32
  ep: u32
  bd: u32
  am: u64
@@ -1179,8 +1179,8 @@ class DaoFeed:
  S: u256
  T: u256
  ah: u256
- cu: u32
- dx: u32
+ cv: u32
+ dy: u32
  eq: u32
  am: u64
 @gl.evm.contract_interface
@@ -1190,16 +1190,16 @@ class _Payee:
  class Write:
   pass
 class VoteGuard(gl.Contract):
- cD: Address
+ cE: Address
  bM: bool
  aO: u256
  bv: TreeMap[str, ProposalFeed]
  aP: DynArray[str]
  bt: TreeMap[str, bool]
- cO: TreeMap[str, str]
- cv: TreeMap[str, DaoFeed]
+ cP: TreeMap[str, str]
+ cw: TreeMap[str, DaoFeed]
  er: DynArray[str]
- cw: TreeMap[Address, u64]
+ cx: TreeMap[Address, u64]
  bw: TreeMap[str, u64]
  aX: TreeMap[Address, u256]
  Q: u256
@@ -1217,9 +1217,9 @@ class VoteGuard(gl.Contract):
  be: TreeMap[str, u32]
  aY: TreeMap[str, u32]
  def __init__(self):
-  self.cD = gl.message.sender_address
+  self.cE = gl.message.sender_address
   self.bM = False
-  self.aO = u256(cQ)
+  self.aO = u256(cR)
   self.Q = u256(0)
   self.U = u256(0)
   self.bN = u32(1)
@@ -1232,15 +1232,15 @@ class VoteGuard(gl.Contract):
   self.S = u256(0)
   self.T = u256(0)
   self.ah = u256(0)
- def cx(self) -> int:
+ def cy(self) -> int:
   return int(datetime.now(timezone.utc).timestamp())
  def bk(self) -> None:
-  if gl.message.sender_address != self.cD:
+  if gl.message.sender_address != self.cE:
    raise gl.vm.UserError(y + " owner only")
- def eN(self, dI: Address, M: int) -> None:
+ def eN(self, dJ: Address, M: int) -> None:
   if M <= 0:
    return
-  self.aX[dI] = u256(int(self.aX.get(dI) or 0) + M)
+  self.aX[dJ] = u256(int(self.aX.get(dJ) or 0) + M)
   self.Q = u256(int(self.Q) + M)
  def aC(self, gF: str) -> dict:
   self.eN(gl.message.sender_address, int(gl.message.value))
@@ -1249,7 +1249,7 @@ class VoteGuard(gl.Contract):
  def fT(self, G: ProposalFeed) -> int:
   c = int(G.ep)
   return c if c > 0 else bf
- def dh(self, E: str) -> typing.Any:
+ def di(self, E: str) -> typing.Any:
   if E not in self.bv:
    return None
   G = self.bv[E]
@@ -1257,15 +1257,15 @@ class VoteGuard(gl.Contract):
   if n == 0:
    return None
   aS = self.fT(G)
-  hr = (int(G.ct) - 1) % (aS if n >= aS else n)
+  hr = (int(G.cu) - 1) % (aS if n >= aS else n)
   return G.az[hr]
- def di(self, g: int) -> typing.Any:
-  dJ = str(self.cO.get(str(int(g))) or "")
-  if dJ == "":
+ def dj(self, g: int) -> typing.Any:
+  dK = str(self.cP.get(str(int(g))) or "")
+  if dK == "":
    return None
-  ga = dJ.rfind("|")
-  E = dJ[:ga]
-  bL = int(dJ[ga + 1:])
+  ga = dK.rfind("|")
+  E = dK[:ga]
+  bL = int(dK[ga + 1:])
   if E not in self.bv:
    return None
   G = self.bv[E]
@@ -1276,7 +1276,7 @@ class VoteGuard(gl.Contract):
   return None
  def fD(self, H: str, bn: str, E: str, C: dict,
  bL: int, now: int) -> None:
-  d = self.cv.get_or_insert_default(H)
+  d = self.cw.get_or_insert_default(H)
   if str(d.H) == "":
    if len(self.er) < fI:
     self.er.append(H)
@@ -1294,16 +1294,16 @@ class VoteGuard(gl.Contract):
   d.am = u64(now)
   v = C["verdict"]
   if v == "RECOMMEND":
-   d.cu = u32(int(d.cu) + 1)
+   d.cv = u32(int(d.cv) + 1)
   elif v == "CAUTION":
-   d.dx = u32(int(d.dx) + 1)
+   d.dy = u32(int(d.dy) + 1)
   else:
    d.eq = u32(int(d.eq) + 1)
- def cE(self, l: Assessment, now: int) -> dict:
+ def cF(self, l: Assessment, now: int) -> dict:
   try:
-   dg = json.loads(str(l.dg))
+   dh = json.loads(str(l.dh))
   except ValueError:
-   dg = {}
+   dh = {}
   try:
    J = json.loads(str(l.J))
   except ValueError:
@@ -1324,25 +1324,26 @@ class VoteGuard(gl.Contract):
   "found": True,
   "assessment_id": int(l.g),
   "proposal_key": str(l.aV),
+  "submitted_url": str(l.cc),
   "source_url": str(l.bT),
   "platform": str(l.ba),
   "dao": str(l.bn),
   "dao_id": str(l.H),
   "submitted_dao": str(l.br),
-  "dao_name_matches": co(str(l.br),
+  "dao_name_matches": cp(str(l.br),
   str(l.bn), str(l.H)),
   "title": str(l.N),
-  "author": str(l.cZ),
+  "author": str(l.da),
   "excerpt": str(l.eL),
-  "anchor": str(l.da),
+  "anchor": str(l.db),
   "verdict": str(l.ae),
   "overall_score": int(l.Y),
   "confidence": str(l.bu),
   "scores": C,
   "labels": V,
   "dimensions": bb,
-  "flags": [x for x in str(l.df).split(",") if x],
-  "bands": dg,
+  "flags": [x for x in str(l.dg).split(",") if x],
+  "bands": dh,
   "evidence": str(l.bC),
   "content_hash": str(l.bB),
   "analyzed_at": int(l.ap),
@@ -1354,8 +1355,8 @@ class VoteGuard(gl.Contract):
  @gl.public.write.payable
  def analyze_proposal(self, F: str, av: str) -> typing.Any:
   value = int(gl.message.value)
-  dj = gl.message.sender_address
-  now = self.cx()
+  dk = gl.message.sender_address
+  now = self.cy()
   self.U = u256(int(self.U) + value)
   try:
    A = ay(F)
@@ -1370,7 +1371,7 @@ class VoteGuard(gl.Contract):
    return self.aC("paused; reads and refunds still work")
   if value < int(self.aO):
    return self.aC("fee is " + str(int(self.aO)) + " wei")
-  fU = int(self.cw.get(dj) or 0)
+  fU = int(self.cx.get(dk) or 0)
   if fU > 0 and now - fU < au:
    return self.aC("rate limited, retry in "
    + str(au - now + fU) + "s")
@@ -1387,7 +1388,7 @@ class VoteGuard(gl.Contract):
   if E not in self.bt and len(self.aP) >= bW:
    return self.aC("proposal capacity reached")
   self.bw[E] = u64(now)
-  self.cw[dj] = u64(now)
+  self.cx[dk] = u64(now)
   self.aA = u256(int(self.aA) + 1)
   def leader_fn():
    return en(A)
@@ -1410,10 +1411,10 @@ class VoteGuard(gl.Contract):
   aj = {}
   for aU, gp in K:
    aj[aU] = int(m["features"][aU])
-  C = de(aj)
+  C = df(aj)
   bC = ft(aj)
-  gP = cA(E, aj)
-  N = D(m["title"], ce)
+  gP = cB(E, aj)
+  N = D(m["title"], cf)
   bn = D(m["dao"], O)
   H = D(m["dao_id"], O)
   if H == "":
@@ -1423,7 +1424,7 @@ class VoteGuard(gl.Contract):
   for i in range(5):
    q = ""
    if isinstance(bU, list) and i < len(bU):
-    q = D(bU[i], cq)
+    q = D(bU[i], cr)
    J.append(q)
   G = self.bv.get_or_insert_default(E)
   if E not in self.bt:
@@ -1440,19 +1441,19 @@ class VoteGuard(gl.Contract):
   if len(G.az) < aS:
    l = G.az.append_new_get()
   else:
-   l = G.az[int(G.ct) % aS]
+   l = G.az[int(G.cu) % aS]
   l.g = u32(g)
   l.aV = E
-  l.dS = D(F, aM)
+  l.cc = D(F, aM)
   l.bT = D(m["source"], aM)
   l.ba = str(A["platform"])
   l.bn = bn
   l.H = H
   l.br = bg
   l.N = N
-  l.cZ = D(m["author"], 60)
+  l.da = D(m["author"], 60)
   l.eL = D(m["excerpt"], bP)
-  l.da = D(m["anchor"], 80)
+  l.db = D(m["anchor"], 80)
   l.aF = u32(C[B[0]])
   l.bA = u32(C[B[1]])
   l.ak = u32(C[B[2]])
@@ -1461,23 +1462,23 @@ class VoteGuard(gl.Contract):
   l.Y = u32(C["overall"])
   l.ae = C["verdict"]
   l.V = ",".join(C["labels"])
-  l.df = ",".join(C["flags"])
+  l.dg = ",".join(C["flags"])
   l.bu = C["confidence"]
   l.bB = gP
   l.bC = bC
   l.J = json.dumps(J)
-  l.dg = json.dumps(gB(aj), sort_keys=True)
+  l.dh = json.dumps(gB(aj), sort_keys=True)
   l.ap = u64(now)
-  l.eM = dj
+  l.eM = dk
   l.bL = u32(bL)
-  G.ct = u32((int(G.ct) + 1) % aS)
+  G.cu = u32((int(G.cu) + 1) % aS)
   G.bd = u32(bL)
   G.am = u64(now)
   if C["overall"] > int(G.bD):
    G.bD = u32(C["overall"])
   if C["overall"] < int(G.aI):
    G.aI = u32(C["overall"])
-  self.cO[str(g)] = E + "|" + str(bL)
+  self.cP[str(g)] = E + "|" + str(bL)
   del self.bw[E]
   self.fD(H, bn, E, C, bL, now)
   v = C["verdict"]
@@ -1485,9 +1486,9 @@ class VoteGuard(gl.Contract):
   ej = str(A["platform"])
   self.aY[ej] = u32(
   int(self.aY.get(ej) or 0) + 1)
-  dK = int(self.aO)
-  self.aB = u256(int(self.aB) + dK)
-  self.eN(dj, value - dK)
+  dL = int(self.aO)
+  self.aB = u256(int(self.aB) + dL)
+  self.eN(dk, value - dL)
   self.bN = u32(g + 1)
   self.af = u256(int(self.af) + 1)
   self.R = u256(int(self.R) + C["overall"])
@@ -1496,9 +1497,9 @@ class VoteGuard(gl.Contract):
   self.S = u256(int(self.S) + C[B[2]])
   self.T = u256(int(self.T) + C[B[3]])
   self.ah = u256(int(self.ah) + C[B[4]])
-  fV = self.cE(l, now)
+  fV = self.cF(l, now)
   fV["status"] = "OK"
-  fV["refund_wei"] = value - dK
+  fV["refund_wei"] = value - dL
   return fV
  @gl.public.write
  def settle_stalled(self, F: str) -> typing.Any:
@@ -1511,7 +1512,7 @@ class VoteGuard(gl.Contract):
   bO = int(self.bw.get(E) or 0)
   if bO <= 0:
    return {"status": "NOTHING_PENDING", "proposal_key": E}
-  gb = self.cx() - bO
+  gb = self.cy() - bO
   if gb < aG:
    raise gl.vm.UserError(
    y + " that round is " + str(gb) + "s old; "
@@ -1520,18 +1521,18 @@ class VoteGuard(gl.Contract):
   return {"status": "OK", "proposal_key": E, "was_pending_for": gb}
  @gl.public.view
  def get_assessment(self, g: int) -> typing.Any:
-  l = self.di(g)
+  l = self.dj(g)
   if l is None:
-   dJ = str(self.cO.get(str(int(g))) or "")
-   if dJ == "":
+   dK = str(self.cP.get(str(int(g))) or "")
+   if dK == "":
     return {"found": False, "assessment_id": int(g),
     "verdict": "UNKNOWN", "reason": "no such assessment id"}
-   ga = dJ.rfind("|")
+   ga = dK.rfind("|")
    return {"found": False, "assessment_id": int(g),
-   "verdict": "UNKNOWN", "proposal_key": dJ[:ga],
+   "verdict": "UNKNOWN", "proposal_key": dK[:ga],
    "reason": "record rotated out of the "
    + str(bf) + "-analysis history window"}
-  return self.cE(l, self.cx())
+  return self.cF(l, self.cy())
  @gl.public.view
  def get_assessment_by_url(self, F: str) -> typing.Any:
   try:
@@ -1542,12 +1543,12 @@ class VoteGuard(gl.Contract):
    "submitted_url": aa(str(F), aM),
    "reason": aa(str(bp) if bp else str(e), 240)}
   E = str(A["key"])
-  l = self.dh(E)
+  l = self.di(E)
   if l is None:
    return {"found": False, "verdict": "UNKNOWN", "proposal_key": E,
    "platform": str(A["platform"]),
    "reason": "never analysed; call analyze_proposal first"}
-  return self.cE(l, self.cx())
+  return self.cF(l, self.cy())
  @gl.public.view
  def get_assessment_history(self, F: str, bV: int) -> typing.Any:
   try:
@@ -1568,7 +1569,7 @@ class VoteGuard(gl.Contract):
   hf = aS if n >= aS else n
   m = []
   for i in range(bE):
-   r = G.az[(int(G.ct) - 1 - i) % hf]
+   r = G.az[(int(G.cu) - 1 - i) % hf]
    m.append({"assessment_id": int(r.g),
    "seq": int(r.bL),
    "overall_score": int(r.Y),
@@ -1587,7 +1588,7 @@ class VoteGuard(gl.Contract):
   A = ""
   for i in range(len(self.er)):
    bo = str(self.er[i])
-   if co(av, str(self.cv[bo].av),
+   if cp(av, str(self.cw[bo].av),
    bo):
     A = bo
     break
@@ -1595,19 +1596,19 @@ class VoteGuard(gl.Contract):
    return {"found": False, "dao": aa(str(av), O),
    "assessments": [],
    "reason": "no proposals analysed for that DAO yet"}
-  aq = self.cv[A]
+  aq = self.cw[A]
   n = int(bV)
   bi = len(aq.fS)
   if n <= 0 or n > bi:
    n = bi
-  now = self.cx()
+  now = self.cy()
   fn = []
   for i in range(bi - 1, -1, -1):
    if len(fn) >= n:
     break
-   l = self.dh(str(aq.fS[i]))
+   l = self.di(str(aq.fS[i]))
    if l is not None:
-    fn.append(self.cE(l, now))
+    fn.append(self.cF(l, now))
   aL = int(aq.aL)
   fE = {}
   for bg, gj in (("overall", aq.R),
@@ -1621,8 +1622,8 @@ class VoteGuard(gl.Contract):
   "found": True, "dao": str(aq.av), "dao_id": A,
   "proposals_tracked": bi, "total_analyses": aL,
   "average_scores": fE,
-  "verdicts": {"RECOMMEND": int(aq.cu),
-  "CAUTION": int(aq.dx),
+  "verdicts": {"RECOMMEND": int(aq.cv),
+  "CAUTION": int(aq.dy),
   "OPPOSE": int(aq.eq)},
   "last_analyzed": int(aq.am),
   "returned": len(fn), "assessments": fn,
@@ -1630,27 +1631,27 @@ class VoteGuard(gl.Contract):
  @gl.public.view
  def get_recent_assessments(self, bV: int) -> typing.Any:
   n = P(int(bV), 1, 50)
-  now = self.cx()
+  now = self.cy()
   m = []
   gG = int(self.bN) - 1
-  dk = gG
-  while dk > 0 and len(m) < n and dk > gG - 4 * n:
-   l = self.di(dk)
+  dl = gG
+  while dl > 0 and len(m) < n and dl > gG - 4 * n:
+   l = self.dj(dl)
    if l is not None:
-    m.append(self.cE(l, now))
-   dk = dk - 1
+    m.append(self.cF(l, now))
+   dl = dl - 1
   return {"returned": len(m), "highest_id": gG,
   "total_analyzed": int(self.af),
   "assessments": m}
  @gl.public.view
  def is_recommended(self, g: int) -> bool:
-  l = self.di(g)
+  l = self.dj(g)
   if l is None:
    return False
   return str(l.ae) == "RECOMMEND"
  @gl.public.view
  def require_recommended(self, g: int) -> typing.Any:
-  l = self.di(g)
+  l = self.dj(g)
   if l is None:
    raise gl.vm.UserError(
    y + " no assessment on record for id "
@@ -1661,8 +1662,8 @@ class VoteGuard(gl.Contract):
    y + " assessment " + str(int(g)) + " ("
    + aa(str(l.N), 60) + ") is " + ae + " at "
    + str(int(l.Y)) + "/100; flags: "
-   + aa(str(l.df), 100))
-  return self.cE(l, self.cx())
+   + aa(str(l.dg), 100))
+  return self.cF(l, self.cy())
  @gl.public.view
  def get_risk_summary(self, F: str) -> typing.Any:
   try:
@@ -1672,7 +1673,7 @@ class VoteGuard(gl.Contract):
    return {"known": False, "verdict": "UNKNOWN", "score": 0,
    "reason": aa(str(bp) if bp else str(e), 200)}
   E = str(A["key"])
-  l = self.dh(E)
+  l = self.di(E)
   if l is None:
    return {"known": False, "verdict": "UNKNOWN", "score": 0,
    "proposal_key": E,
@@ -1694,9 +1695,9 @@ class VoteGuard(gl.Contract):
   "worst_dimension": B[bx],
   "worst_label": V[bx] if bx < len(V) else "",
   "worst_score": C[bx],
-  "flags": [x for x in str(l.df).split(",") if x][:5],
+  "flags": [x for x in str(l.dg).split(",") if x][:5],
   "title": str(l.N), "dao": str(l.bn),
-  "age_seconds": self.cx() - int(l.ap),
+  "age_seconds": self.cy() - int(l.ap),
   }
  @gl.public.view
  def verify_assessment(self, g: int) -> typing.Any:
@@ -1719,9 +1720,9 @@ class VoteGuard(gl.Contract):
     "assessment_id": int(g),
     "reason": "evidence field out of range: " + aU}
    fo[aU] = int(v)
-  aJ = de(fo)
+  aJ = df(fo)
   E = str(an["proposal_key"])
-  fF = cA(E, fo)
+  fF = cB(E, fo)
   hs = an["scores"]
   gc = [("overall", int(an["overall_score"]), aJ["overall"]),
   ("verdict", str(an["verdict"]), aJ["verdict"]),
@@ -1734,17 +1735,17 @@ class VoteGuard(gl.Contract):
   ("content_hash", str(an["content_hash"]), fF)]
   for k in B:
    gc.append((k, int(hs.get(k, -1)), aJ[k]))
-  dy = []
+  dz = []
   for bc, gT, gd in gc:
    if str(gT) != str(gd):
-    dy.append(bc + ": " + str(gT) + " -> " + str(gd))
+    dz.append(bc + ": " + str(gT) + " -> " + str(gd))
   return {
-  "verified": len(dy) == 0,
+  "verified": len(dz) == 0,
   "assessment_id": int(g),
   "proposal_key": E,
   "rubric_version": aZ,
   "evidence": str(an["evidence"]),
-  "differences": dy,
+  "differences": dz,
   "recomputed": {"overall": aJ["overall"],
   "verdict": aJ["verdict"],
   "confidence": aJ["confidence"],
@@ -1764,7 +1765,7 @@ class VoteGuard(gl.Contract):
   m = []
   for i in range(bh, min(bh + n, len(self.aP))):
    E = str(self.aP[i])
-   l = self.dh(E)
+   l = self.di(E)
    if l is None:
     continue
    m.append({"proposal_key": E, "title": str(l.N),
@@ -1773,7 +1774,7 @@ class VoteGuard(gl.Contract):
    "overall_score": int(l.Y),
    "verdict": str(l.ae),
    "labels": [x for x in str(l.V).split(",") if x],
-   "flags": [x for x in str(l.df).split(",") if x],
+   "flags": [x for x in str(l.dg).split(",") if x],
    "confidence": str(l.bu),
    "assessment_id": int(l.g),
    "source_url": str(l.bT),
@@ -1782,7 +1783,7 @@ class VoteGuard(gl.Contract):
   "returned": len(m), "proposals": m}
  @gl.public.view
  def get_stats(self) -> typing.Any:
-  cP = int(self.af)
+  cQ = int(self.af)
   fE = {}
   for bg, bi in (("overall", self.R),
   (B[0], self.aw),
@@ -1790,21 +1791,21 @@ class VoteGuard(gl.Contract):
   (B[2], self.S),
   (B[3], self.T),
   (B[4], self.ah)):
-   fE[bg] = (int(bi) // cP) if cP > 0 else 0
+   fE[bg] = (int(bi) // cQ) if cQ > 0 else 0
   es = {}
   for v in eb:
    es[v] = int(self.be.get(v) or 0)
-  dL = {}
+  dM = {}
   for p in bm:
-   dL[p] = int(self.aY.get(p) or 0)
+   dM[p] = int(self.aY.get(p) or 0)
   return {
   "proposals_tracked": len(self.aP),
   "daos_tracked": len(self.er),
   "total_requests": int(self.aA),
-  "total_analyzed": cP,
+  "total_analyzed": cQ,
   "assessments_issued": int(self.bN) - 1,
   "verdicts": es,
-  "platforms": dL,
+  "platforms": dM,
   "average_scores": fE,
   "total_fees_wei": int(self.aB),
   "refunds_owed_wei": int(self.Q),
@@ -1817,17 +1818,17 @@ class VoteGuard(gl.Contract):
    bb.append({"key": B[i], "weight": eD[i],
    "buckets": list(eE[i])})
   return {
-  "owner": str(self.cD.as_hex),
+  "owner": str(self.cE.as_hex),
   "paused": bool(self.bM),
   "fee_wei": int(self.aO),
   "max_fee_wei": bG,
   "rubric_version": aZ,
   "dimensions": bb,
-  "ordinal_bands": [list(b) for b in dC],
+  "ordinal_bands": [list(b) for b in dD],
   "quantization_step": dZ,
   "verdicts": list(eb),
   "verdict_thresholds": {"RECOMMEND": bX,
-  "CAUTION": cG, "OPPOSE": 0},
+  "CAUTION": cH, "OPPOSE": 0},
   "verdict_overrides": ["2+ dimensions at worst rung -> OPPOSE",
   "1 at worst rung or 3+ abstentions -> "
                                   "never RECOMMEND"],
@@ -1835,7 +1836,7 @@ class VoteGuard(gl.Contract):
   "vector_ceilings": {k: hi for k, hi in K},
   "model_fields": list(Z),
   "abstained_rung": ag,
-  "amount_bands": list(dD),
+  "amount_bands": list(dE),
   "flag_names": list(eO),
   "limits": {"rate_limit_seconds": au,
   "proposal_cooldown_seconds": aE,
@@ -1843,15 +1844,15 @@ class VoteGuard(gl.Contract):
   "history_per_proposal": bf,
   "max_proposals": bW,
   "max_url_length": aM,
-  "judged_chars": cH,
-  "quote_min_chars": cp},
+  "judged_chars": cI,
+  "quote_min_chars": cq},
   "consensus": "parsed exact; model quote-checked, bounded, +-1 rung",
   }
  @gl.public.view
- def refund_of(self, dI: str) -> typing.Any:
-  dz = Address(str(dI))
-  return {"address": str(dz.as_hex),
-  "refund_wei": int(self.aX.get(dz) or 0)}
+ def refund_of(self, dJ: str) -> typing.Any:
+  dA = Address(str(dJ))
+  return {"address": str(dA.as_hex),
+  "refund_wei": int(self.aX.get(dA) or 0)}
  @gl.public.view
  def preview_url(self, F: str) -> typing.Any:
   try:
@@ -1861,7 +1862,7 @@ class VoteGuard(gl.Contract):
    return {"ok": False, "reason": aa(str(bp) if bp else str(e),
    240)}
   E = str(A["key"])
-  l = self.dh(E)
+  l = self.di(E)
   return {"ok": True, "platform": str(A["platform"]),
   "proposal_key": E, "fetch_url": str(A["fetch"]),
   "already_analyzed": l is not None,
@@ -1870,14 +1871,14 @@ class VoteGuard(gl.Contract):
  @gl.public.write
  def set_fee(self, gk: int) -> typing.Any:
   self.bk()
-  dK = int(gk)
-  if dK < 0 or dK > bG:
+  dL = int(gk)
+  if dL < 0 or dL > bG:
    raise gl.vm.UserError(
    y + " fee must be between 0 and "
    + str(bG) + " wei")
   gU = int(self.aO)
-  self.aO = u256(dK)
-  return {"status": "OK", "old_fee_wei": gU, "fee_wei": dK}
+  self.aO = u256(dL)
+  return {"status": "OK", "old_fee_wei": gU, "fee_wei": dL}
  @gl.public.write
  def set_paused(self, value: bool) -> typing.Any:
   self.bk()
@@ -1886,22 +1887,22 @@ class VoteGuard(gl.Contract):
  @gl.public.write
  def transfer_ownership(self, fG: str) -> typing.Any:
   self.bk()
-  dz = Address(str(fG))
-  if dz == Address("0x" + "0" * 40):
+  dA = Address(str(fG))
+  if dA == Address("0x" + "0" * 40):
    raise gl.vm.UserError(y + " owner cannot be zero")
-  gU = str(self.cD.as_hex)
-  self.cD = dz
-  return {"status": "OK", "owner": str(dz.as_hex)}
+  gU = str(self.cE.as_hex)
+  self.cE = dA
+  return {"status": "OK", "owner": str(dA.as_hex)}
  @gl.public.write
  def claim_refund(self) -> typing.Any:
-  dI = gl.message.sender_address
-  M = int(self.aX.get(dI) or 0)
+  dJ = gl.message.sender_address
+  M = int(self.aX.get(dJ) or 0)
   if M <= 0:
    return {"status": "NOTHING_OWED", "refund_wei": 0}
-  self.aX[dI] = u256(0)
+  self.aX[dJ] = u256(0)
   self.Q = u256(int(self.Q) - M)
   self.U = u256(int(self.U) - M)
-  _Payee(dI).emit(value=u256(M))
+  _Payee(dJ).emit(value=u256(M))
   return {"status": "OK", "refund_wei": M}
  @gl.public.write
  def withdraw_fees(self, M: int) -> typing.Any:
@@ -1917,6 +1918,6 @@ class VoteGuard(gl.Contract):
    + " wei (contract holds " + str(fW) + ", owes "
    + str(int(self.Q)) + ")")
   self.U = u256(fW - bE)
-  _Payee(self.cD).emit(value=u256(bE))
+  _Payee(self.cE).emit(value=u256(bE))
   return {"status": "OK", "withdrawn_wei": bE,
   "remaining_available_wei": bq - bE}

@@ -2086,6 +2086,11 @@ class VoteGuard(gl.Contract):
             "found": True,
             "assessment_id": int(rec.assessment_id),
             "proposal_key": str(rec.proposal_key),
+            # BOTH urls: what the submitter typed and what the contract
+            # canonicalised it to. Storing one and exposing only the other
+            # would make the submitted form unauditable, which is the opposite
+            # of the point — the gap between the two IS the SPA finding.
+            "submitted_url": str(rec.submitted_url),
             "source_url": str(rec.source_url),
             "platform": str(rec.platform),
             "dao": str(rec.dao),

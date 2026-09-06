@@ -14,6 +14,7 @@ export type Assessment = {
   found: boolean;
   assessment_id: number;
   proposal_key: string;
+  submitted_url: string;
   source_url: string;
   platform: "snapshot" | "tally" | "discourse";
   dao: string;
@@ -44,6 +45,7 @@ export type Assessment = {
 
 export type ProposalRow = {
   proposal_key: string;
+  submitted_url: string;
   title: string;
   dao: string;
   dao_id: string;

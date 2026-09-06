@@ -259,6 +259,7 @@ export default async function ProposalPage({ params }: Params) {
                     : `${a.bands?.largest_amount ?? "—"}${a.bands?.amount_unit ? ` ${a.bands.amount_unit}` : ""}`,
                 ],
                 ["Source anchor", a.anchor || "—"],
+                ["Submitted as", a.submitted_url || "—"],
               ].map(([k, v]) => (
                 <div key={k} className="flex items-baseline justify-between gap-3">
                   <dt className="shrink-0 text-ink-500">{k}</dt>
