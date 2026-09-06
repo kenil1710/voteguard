@@ -53,5 +53,94 @@
         "note": "the oracle is pinned at construction; there is no setter"
       }
     }
-  }
+  },
+  "tagline": "Every proposal deserves a second opinion.",
+  "category": "Projects — contract + composable consumer + frontend",
+  "summary": "An on-chain risk oracle for DAO governance proposals. Submit any Snapshot, Tally or Discourse-forum proposal URL; five GenLayer validators independently fetch the proposal, apply one fixed rubric, and agree on an assessment across five dimensions (feasibility 25, budget 25, centralization 20, clarity 15, alignment 15). Nineteen features are parsed from the immutable proposal text and five come from a model that must quote the proposal verbatim and is clamped into bounds the parser computed. The verdict is derived by arithmetic, never asked of a model. Every stored number recomputes from the evidence beside it, and any contract can gate on it with require_recommended().",
+  "runner": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6",
+  "consensus": {
+    "parsed_fields": "19 ordinals parsed from the proposal text — exact equality, no tolerance. The body is signed and pinned, so a disagreement means one node read a different document.",
+    "model_fields": "5 ladder levels — three independent checks: the leader's quote verifies verbatim (28+ contiguous characters) against the text THIS node fetched; the level sits inside the bounds THIS node computed; and it is within one rung of THIS node's own reading.",
+    "why": "docs/PROBE.md section 5. Five validators asked for five free ordinals settled 0 rounds of 3. A single three-valued verdict settled 0 of 4. Median-of-3 per node settled 0 of 4. An explicit ladder alone settled 0 of 5. The ladder PLUS a normalised quote gate PLUS parser bounds is what settles.",
+    "disclosed_tolerance": "Two accepted readings of one proposal can differ by one rung on a dimension. Published in get_config, on /docs, and made observable by get_assessment_history. Bradbury scored the Aave proposal RECOMMEND 75 where Studionet scored it CAUTION 60 — the same rubric, two independent validator sets.",
+    "verdict": "Derived deterministically from the five dimensions. Any dimension at its worst rung forfeits a RECOMMEND; two of them is an OPPOSE whatever the average says; three model abstentions forfeit it too."
+  },
+  "data_sources": {
+    "snapshot": "hub.snapshot.org/graphql — the proposal body is signed and IPFS-pinned; the CID is stored as an anchor",
+    "tally": "www.tally.xyz/gov/<org>/proposal/<n> — read from the page's own __NEXT_DATA__ payload; api.tally.xyz returns 401 without a key, which a contract cannot hold",
+    "discourse": "any forum running Discourse, via /t/<id>.json — the slug is ignored by Discourse itself and is discarded",
+    "never_fetched": "the submitted URL. snapshot.org/#/<space>/proposal/<0x…> answers 200 with a 1,363-byte empty app shell, byte-identical for every proposal that has ever existed.",
+    "never_read": "scores, scores_total, votes and state are excluded from the request the validators make, not merely ignored afterwards"
+  },
+  "verification": {
+    "offline_suite": {
+      "tests": 315,
+      "failed": 0,
+      "source": "test/test_logic.py",
+      "note": "stdlib only; drives BOTH the readable source and the mangled artifact through a full lifecycle, and asserts the balance invariant"
+    },
+    "live_suite": {
+      "checks": 97,
+      "failed": 0,
+      "source": "test/e2e.mjs",
+      "network": "studionet",
+      "note": "real validators, real model, real proposals across all three platforms"
+    },
+    "repository_audit": {
+      "checks": 54,
+      "source": "tools/audit.sh",
+      "note": "run with --network=bradbury to also check the live contract"
+    }
+  },
+  "build": {
+    "command": "bash tools/build.sh",
+    "stages": [
+      "tools/minify_contract.py -> build/*.premangle.py",
+      "tools/mangle_names.py -> build/*.min.py + build/*.names.json"
+    ],
+    "size_ceiling_measured": {
+      "tool": "test/size_gate.py — deploys a padded contract to Bradbury and reads a value back",
+      "accepted": 52804,
+      "refused": 53200,
+      "refusal": "BlockPubdataLimitReached",
+      "measured_on": "2026-09-06, for this project",
+      "note": "Sentinel had recorded 53,000 accepted on the same network. Re-measured rather than inherited, because the gap is exactly what turns a stale constant into a failed deploy.",
+      "budget_enforced": 52700
+    },
+    "never_renamed": [
+      "the contract class name",
+      "public method names (the ABI)",
+      "dunders",
+      "names used as keyword arguments",
+      "every string literal"
+    ]
+  },
+  "frontend": {
+    "url": "https://voteguard-sigma.vercel.app",
+    "network": "bradbury",
+    "pages": [
+      "/",
+      "/analyze",
+      "/proposals",
+      "/proposal/[id]",
+      "/dao/[name]",
+      "/docs"
+    ],
+    "api": {
+      "/api/preview": "server-side relay for the free URL preview — the browser never talks to the RPC"
+    },
+    "gates": "tsc --noEmit, eslint --max-warnings=0 and next build all clean",
+    "structure": "Next.js route groups: (marketing) has no import path to chain state at all, so the landing page cannot half-render on a slow RPC; (app) carries the network badge and the contract address."
+  },
+  "probe": {
+    "contracts": [
+      "contracts/_render_probe.py",
+      "contracts/_judge_probe.py",
+      "contracts/_judge_probe2.py",
+      "contracts/_bal_probe.py"
+    ],
+    "findings": "docs/PROBE.md — ten findings, six of which changed the architecture",
+    "headline": "the URL in the brief returns 200 and contains nothing"
+  },
+  "note": "Verify with: shasum -a 256 build/*.min.py against the artifacts block, or `genlayer network set testnet-bradbury` then `python3 tools/verify_onchain.py <address> build/VoteGuard.min.py`."
 }
