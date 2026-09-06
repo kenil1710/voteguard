@@ -1,0 +1,57 @@
+{
+  "project": "VoteGuard",
+  "artifacts": {
+    "build/VoteGuard.min.py": {
+      "source": "contracts/VoteGuard.py",
+      "bytes": 52552,
+      "sha256": "96a568b53b9ba8df77e3250453d0ff331695c69206da449b3028513eb44027d4",
+      "source_sha256": "971489887752a975b3753a2ee042f7c9a22c258da8b6b98154e18bf4728aab97",
+      "premangle_bytes": 64357
+    },
+    "build/GovernanceConsumer.min.py": {
+      "source": "contracts/GovernanceConsumer.py",
+      "bytes": 11918,
+      "sha256": "bac1991a92f8b221c0ea1b65609675163e5a7532b0be6f68dd7ccf43edbd7591",
+      "source_sha256": "c781ab4d74845561b3653314e59ccc3eaea28ac2aef37e8041e6bb7275ec02ac",
+      "premangle_bytes": 14929
+    }
+  },
+  "deployments": {
+    "studionet": {
+      "network": "studionet",
+      "rpc": "https://studio.genlayer.com/api",
+      "owner": "0xeE1d34D73cc6963F19870Fa3a68c9c11C34856F6",
+      "deployed_at": "2026-09-06T16:40:39.068Z",
+      "VoteGuard": {
+        "address": "0x6b460B7C88CFBaa20f63ad6C12cF3E805e10b3Be",
+        "deploy_tx": "0x4464dcc8b2f6111d0a7c689c2f7664713476c101ee1e064b024748f328b41243",
+        "artifact_bytes": 52804
+      },
+      "GovernanceConsumer": {
+        "address": "0xaCED94D2fb3891C9E100AB2D92AC5271520158D5",
+        "deploy_tx": "0xe12d5c6c752d55f09753bcddb6f7dd4d7cf1ae154a2906f6dea55ed0e3dc4dd3",
+        "artifact_bytes": 11918
+      }
+    },
+    "bradbury": {
+      "network": "testnet-bradbury",
+      "rpc": "https://rpc-bradbury.genlayer.com",
+      "VoteGuard": {
+        "address": "0x3EA3b81B4e1e3D2a4834F88D4125Ebf3890315a7",
+        "deploy_tx": "0x8456850afbcc8144a8226759a8893666d988df40016dda29d1fac454b6246345",
+        "artifact_bytes": 52549
+      },
+      "owner": "0xC70FF4C06aEcb796ED712029EE548834764c9Fe8",
+      "explorer": "https://explorer-bradbury.genlayer.com/address/0x3EA3b81B4e1e3D2a4834F88D4125Ebf3890315a7",
+      "verified": "genlayer code <addr> is BYTE-IDENTICAL to build/VoteGuard.min.py (sha256 96a568b5…27d4), read back with tools/verify_onchain.py",
+      "fee": "set to 0 — the genlayer CLI hardcodes value:0n on writes, so a non-zero fee makes analyze_proposal uncallable from the command line",
+      "GovernanceConsumer": {
+        "address": "0x688734729a3617a51848D3797f0B2440DaDB6d0f",
+        "deploy_tx": "0x793501c9c48619c3119310345484c64b5f8a23d9c376fb7dcaf57a028c63caf9",
+        "artifact_bytes": 11918,
+        "oracle": "0x3EA3b81B4e1e3D2a4834F88D4125Ebf3890315a7",
+        "note": "the oracle is pinned at construction; there is no setter"
+      }
+    }
+  }
+}

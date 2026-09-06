@@ -1,0 +1,17 @@
+node_modules/
+.next/
+.env.local
+.env
+*.log
+.DS_Store
+.vercel/
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+frontend/tsconfig.tsbuildinfo
+__pycache__/
+*.pyc
+AGENTS.md
+HANDOVER.md
+test/.accounts.json
+*.tsbuildinfo
