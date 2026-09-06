@@ -324,7 +324,7 @@ two runs is exactly the kind of drift that turns an inherited constant into a
 four-minute deploy that ends in a rejection, which is why this was re-measured
 for this project rather than assumed to still hold.
 
-`VoteGuard.min.py` ships at **52,549 bytes**, and the offline suite gates on a
+`VoteGuard.min.py` ships at **52,582 bytes**, and the offline suite gates on a
 52,700-byte budget — under the largest proven size, with room for a change,
 because an artifact that fits by zero bytes is an artifact nobody can edit.
 

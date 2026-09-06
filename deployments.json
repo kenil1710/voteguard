@@ -39,7 +39,7 @@
       "VoteGuard": {
         "address": "0xE6c5C4E24529fd445AEb8083729Ca89773806fa3",
         "deploy_tx": "0x95ed0777218b217a9a29d695c6fb0b83e1267cbe9a44d2b6788f238326da3b71",
-        "artifact_bytes": 52579
+        "artifact_bytes": 52582
       },
       "owner": "0xC70FF4C06aEcb796ED712029EE548834764c9Fe8",
       "explorer": "https://explorer-bradbury.genlayer.com/address/0xE6c5C4E24529fd445AEb8083729Ca89773806fa3",
