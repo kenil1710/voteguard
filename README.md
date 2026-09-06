@@ -36,7 +36,7 @@ an identifier, and the identifier builds a request against an endpoint that
 actually carries the proposal. `preview_url` shows both strings, for free,
 before anyone pays.
 
-Eight more findings are in [`docs/PROBE.md`](docs/PROBE.md). Six of them changed
+Nine more findings are in [`docs/PROBE.md`](docs/PROBE.md). Six of them changed
 the architecture.
 
 ---
@@ -138,7 +138,7 @@ contracts/
   _judge_probe*.py         throwaway: can five nodes agree about a model's reading?
   _bal_probe.py            throwaway: what does this runner expose for a balance?
 build/                     the deployed artifacts, plus the pre-mangle source for diffing
-docs/PROBE.md              nine findings, six of which changed the architecture
+docs/PROBE.md              ten findings, six of which changed the architecture
 test/
   test_logic.py            315 offline tests, stdlib only
   e2e.mjs                  the live suite — real network, real validators, real proposals
