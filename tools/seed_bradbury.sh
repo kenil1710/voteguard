@@ -6,8 +6,10 @@
 # Bradbury throttles a wallet two ways and they need different responses:
 #
 #   "Request exceeds defined limit" / "node is at capacity"
-#       — the transaction was never submitted. Wait and RETRY the same
-#         proposal; nothing was consumed.
+#       — the transaction was never submitted, and the node's own
+#         `retryAfterMs` is about ONE SECOND: this is a short gas-rate
+#         window, not a ban. Retry quickly and often; a 90-second backoff
+#         just means most attempts land in a busier window than the last.
 #   LEADER_TIMEOUT
 #       — the transaction WAS submitted and the CLI gave up polling before
 #         the round rotated. It often settles anyway, so the only reliable
@@ -49,11 +51,11 @@ for entry in "${URLS[@]}"; do
   if stored "$url"; then printf '  · already assessed: %s\n' "$what"; continue; fi
   printf '  → %s\n' "$what"
 
-  for attempt in 1 2 3 4 5 6; do
+  for attempt in $(seq 1 40); do
     out=$(genlayer write "$VG" analyze_proposal --args "$url" "$dao" 2>&1)
     if printf '%s' "$out" | grep -qiE "exceeds defined limit|at capacity|rate limit"; then
-      printf '      throttled (attempt %d) — backing off 90s\n' "$attempt"
-      sleep 90
+      [ $((attempt % 8)) -eq 1 ] && printf '      throttled (attempt %d) — retrying\n' "$attempt"
+      sleep 4
       continue
     fi
     # Submitted. Whether the CLI saw it settle or not, the contract decides.
