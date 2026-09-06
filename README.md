@@ -160,5 +160,35 @@ python3 tools/verify_onchain.py <addr> build/VoteGuard.min.py
 
 ## Deployments
 
-See [`deployments.json`](deployments.json) for addresses, artifact checksums and
+**Bradbury testnet** — both contracts byte-verified against the artifacts in
+`build/`:
+
+| | Address |
+|---|---|
+| VoteGuard | [`0xE6c5C4E2…06fa3`](https://explorer-bradbury.genlayer.com/address/0xE6c5C4E24529fd445AEb8083729Ca89773806fa3) |
+| GovernanceConsumer | [`0x59A9BBB0…0E68B`](https://explorer-bradbury.genlayer.com/address/0x59A9BBB0fA44aEe2FCA390CE898F358fcB70E68B) |
+
+Three real governance proposals are assessed on that deployment, each of which
+recomputes from its own stored evidence on chain:
+
+| # | Platform | Proposal | Verdict |
+|---|---|---|---|
+| 1 | Snapshot | Aave — *[ARFC] Deploy Aave V4 on Arc* | RECOMMEND 70/100 |
+| 2 | Discourse | Arbitrum — *[Constitutional] AIP Fast Feed* | CAUTION 50/100 |
+| 3 | Snapshot | ENS — *[7.1] [Social] SPP3: Marketplace RFP* | RECOMMEND 80/100 |
+
+```bash
+genlayer call 0xE6c5C4E24529fd445AEb8083729Ca89773806fa3 verify_assessment --args 3
+# → verified: true, differences: []
+```
+
+The Tally path is **not** exercised on Bradbury. It is proven on Studionet — the
+live suite assessed `tally.xyz/gov/uniswap/proposal/86` as one of its 97 passing
+checks — but every Bradbury attempt hit the node's gas-rate limit, and the
+225 KB page is the heaviest of the three fetches. Recorded as not done rather
+than described as done.
+
+Site: **https://voteguard-sigma.vercel.app**
+
+See [`deployments.json`](deployments.json) for checksums, transaction hashes and
 the measured size ceiling.

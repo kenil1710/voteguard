@@ -45,7 +45,57 @@
       "explorer": "https://explorer-bradbury.genlayer.com/address/0xE6c5C4E24529fd445AEb8083729Ca89773806fa3",
       "verified": "genlayer code <addr> is BYTE-IDENTICAL to build/VoteGuard.min.py (sha256 f61564fb…58e8), read back with tools/verify_onchain.py",
       "fee": "set to 0 — the genlayer CLI hardcodes value:0n on writes, so a non-zero fee makes analyze_proposal uncallable from the command line",
-      "supersedes": "0x3EA3b81B4e1e3D2a4834F88D4125Ebf3890315a7 — redeployed so the chain matches the repository byte for byte after `submitted_url` was restored to the assessment view. That earlier address holds one real assessment ([ARFC] Deploy Aave V4 on Arc, RECOMMEND 75/100, verified true) and is left standing rather than deleted, but it is NOT the build in this repo."
+      "supersedes": "0x3EA3b81B4e1e3D2a4834F88D4125Ebf3890315a7 — redeployed so the chain matches the repository byte for byte after `submitted_url` was restored to the assessment view. That earlier address holds one real assessment ([ARFC] Deploy Aave V4 on Arc, RECOMMEND 75/100, verified true) and is left standing rather than deleted, but it is NOT the build in this repo.",
+      "GovernanceConsumer": {
+        "address": "0x59A9BBB0fA44aEe2FCA390CE898F358fcB70E68B",
+        "deploy_tx": "0x5cec4dfd89e49e59e54f47e1b0f41ab7c4cc02ad9d97ab54098e2565b6637990",
+        "artifact_bytes": 11918,
+        "oracle": "0xE6c5C4E24529fd445AEb8083729Ca89773806fa3",
+        "verified": "byte-identical to build/GovernanceConsumer.min.py (sha256 bac1991a…7591)",
+        "wiring_proof": "get_terms returns oracle_rubric {rubric_version 1.0.0, thresholds RECOMMEND 70 / CAUTION 45}, read ACROSS the contract boundary — so the pair is wired to each other and not merely deployed at two addresses.",
+        "note": "the oracle is pinned at construction; there is no setter"
+      },
+      "evidence": {
+        "note": "Three REAL governance proposals, analysed by Bradbury validators on this deployment. Each recomputes from its own stored evidence on chain: `genlayer call <addr> verify_assessment --args <id>` returns verified true with no differences.",
+        "assessments": [
+          {
+            "id": 1,
+            "platform": "snapshot",
+            "dao": "Aave DAO",
+            "title": "[ARFC] Deploy Aave V4 on Arc",
+            "verdict": "RECOMMEND",
+            "score": 70,
+            "confidence": "MEDIUM",
+            "content_hash": "304:3d84e50d80bb57bd",
+            "verified": true
+          },
+          {
+            "id": 2,
+            "platform": "discourse",
+            "dao": "forum.arbitrum.foundation",
+            "title": "[Constitutional] AIP Fast Feed",
+            "verdict": "CAUTION",
+            "score": 50,
+            "confidence": "MEDIUM",
+            "content_hash": "270:c21239e595cab405",
+            "verified": true
+          },
+          {
+            "id": 3,
+            "platform": "snapshot",
+            "dao": "ENS",
+            "title": "[7.1] [Social] SPP3: Marketplace RFP",
+            "verdict": "RECOMMEND",
+            "score": 80,
+            "confidence": "HIGH",
+            "content_hash": "305:2b14ee7646d98115",
+            "verified": true
+          }
+        ],
+        "composability_proof": "GovernanceConsumer.preflight(<ENS proposal url>) returns would_release true with no blockers, reading assessment 3 across the contract boundary and applying its own snapshotted terms (RECOMMEND required, min_score 70). strict_release(<id>) is require_recommended reached across the boundary: it returns the record for a recommendation and reverts for anything else.",
+        "tally_on_bradbury": "NOT analysed on Bradbury. The Tally path IS proven on Studionet — the live suite assessed www.tally.xyz/gov/uniswap/proposal/86 successfully as part of its 97 passing checks — but every Bradbury attempt during this session hit the node's gas-rate limit (\"node is at capacity\") and the 225 KB page makes it the heaviest of the three fetches. Recorded as not done rather than described as done.",
+        "network_conditions": "Bradbury was congested throughout: `transaction gas rate limit exceeded: node is at capacity, retry in ~858ms` on most submissions, and one round reported LEADER_TIMEOUT and then settled anyway after rotation. The CLI's exit status is not a reliable signal on this network; the contract's own state is."
+      }
     }
   },
   "tagline": "Every proposal deserves a second opinion.",
