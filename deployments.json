@@ -5,7 +5,7 @@
       "source": "contracts/VoteGuard.py",
       "bytes": 52582,
       "sha256": "f61564fb137b71035b7cfc151c78b93a8ca208bac0fce9d493c767cfeb9558e8",
-      "source_sha256": "f3a7bcd3319fb85d9fea595228f59924892d24362b1401f042bff275fe4ff7c6",
+      "source_sha256": "1eb381961e4dcc9cb988e13e30946eaba0e56a549d590e861b230dfb482f68e6",
       "premangle_bytes": 64400
     },
     "build/GovernanceConsumer.min.py": {

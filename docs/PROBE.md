@@ -175,12 +175,12 @@ hallucination.
 2. **A normalised, windowed quote gate** — both sides stripped of markdown, and
    a match is any 28+ character contiguous run. Still impossible to fake by
    paraphrase; no longer defeated by formatting.
-3. **Parser bounds** — eighteen features parsed from the immutable proposal text
+3. **Parser bounds** — nineteen features parsed from the immutable proposal text
    compute a floor and a ceiling, and the model's level is clamped into them.
    Where the evidence is decisive the range collapses to one value and the model
    has no influence at all.
 
-The shipped rule compares the eighteen parsed fields **exactly**, and the five
+The shipped rule compares the nineteen parsed fields **exactly**, and the five
 model fields by three independent checks: the quote verifies verbatim against
 the text *this* node fetched, the level sits inside the bounds *this* node
 computed, and the level is within one rung of *this* node's own reading.

@@ -20,10 +20,10 @@
 # platform and an identifier, and the identifier is used to build a request
 # against a document endpoint that actually carries the proposal.
 #
-# WHAT VALIDATORS BIND. Not a score — a FEATURE VECTOR. Eighteen ordinals are
+# WHAT VALIDATORS BIND. Not a score — a FEATURE VECTOR. Nineteen ordinals are
 # parsed from the proposal text by pure Python, and five come from the model,
 # one per dimension. Every stored number is a pure integer function of those
-# twenty-three: `evidence` IS the agreed vector, the dimension scores, the
+# twenty-four: `evidence` IS the agreed vector, the dimension scores, the
 # labels, the flags and the verdict are all recomputed from it after consensus,
 # `content_hash` covers the canonical proposal key plus the vector, and
 # verify_assessment() recomputes the entire record from `evidence` alone.
@@ -882,7 +882,7 @@ def _fetch_doc(target: dict) -> dict:
     return _doc_discourse(target)
 
 
-# --- deterministic features. Eighteen ordinals parsed from the proposal text.
+# --- deterministic features. Nineteen ordinals parsed from the proposal text.
 #
 # These are the half of the vector that CANNOT disagree. A Snapshot proposal's
 # body is signed and pinned to IPFS, a Tally description is the on-chain
@@ -1753,7 +1753,7 @@ def _agrees(lead: typing.Any, mine: typing.Any, hay: str) -> bool:
     """THE consensus rule, and the honest statement of what an LLM oracle can
     promise.
 
-    On the EIGHTEEN PARSED FIELDS it is exact equality, with no tolerance at
+    On the NINETEEN PARSED FIELDS it is exact equality, with no tolerance at
     all. Those are computed from a proposal body that is signed and pinned, so
     two nodes reaching different numbers there means one of them read a
     different document, and that must never settle.

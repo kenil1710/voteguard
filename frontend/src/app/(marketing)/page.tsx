@@ -21,7 +21,7 @@ const STEPS = [
   {
     n: "03",
     title: "One rubric, applied five ways",
-    body: "Eighteen features are parsed from the proposal text and five are read by a model against a fixed ladder — each requiring a verbatim quote. The parser sets a floor and a ceiling; the model picks inside them.",
+    body: "Nineteen features are parsed from the proposal text and five are read by a model against a fixed ladder — each requiring a verbatim quote. The parser sets a floor and a ceiling; the model picks inside them.",
   },
   {
     n: "04",

@@ -170,12 +170,12 @@ export default async function DocsPage() {
 
         <H2 id="bounds">How the model is fenced</H2>
         <P>
-          Eighteen features are parsed from the proposal text by ordinary code —
+          Nineteen features are parsed from the proposal text by ordinary code —
           length, section headers, the largest requested amount and its unit,
           whether payment is tranched, whether there is a clawback clause,
           whether a multisig or council is named, whether anyone gets sole
           discretion, whether there is a revocation path, whether voting
-          parameters are touched, whether placeholders remain. Those eighteen
+          parameters are touched, whether placeholders remain. Those nineteen
           are computed from a proposal body that is signed and pinned, so two
           validators reach the same number with certainty rather than with
           probability.
@@ -264,7 +264,7 @@ export default async function DocsPage() {
 
         <H2 id="consensus">What the validators agree on</H2>
         <P>
-          On the eighteen parsed fields it is exact equality with no tolerance
+          On the nineteen parsed fields it is exact equality with no tolerance
           at all. Two nodes reaching different numbers there means one of them
           read a different document, and that must never settle.
         </P>
