@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { NETWORK, VOTEGUARD, explorerAddress, configured } from "@/lib/genlayer";
 import { shortAddress } from "@/lib/format";
+import { ConnectWallet } from "./ConnectWallet";
 
 function Mark({ className = "" }: { className?: string }) {
   return (
@@ -78,12 +79,17 @@ const NAV = [
   { href: "/docs", label: "Methodology" },
 ];
 
+/**
+ * Every page that can touch the chain carries this: the network it is pointed
+ * at, the contract it reads, and the wallet control. The badge and the address
+ * stay server-rendered — only <ConnectWallet /> needs the browser.
+ */
 export function AppHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-ink-700/40 bg-ink-900/85 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-5">
         <Wordmark small />
-        <nav className="flex items-center gap-1 text-sm">
+        <nav className="hidden items-center gap-1 text-sm sm:flex">
           {NAV.map((n) => (
             <Link
               key={n.href}
@@ -94,8 +100,8 @@ export function AppHeader() {
             </Link>
           ))}
         </nav>
-        <div className="hidden items-center gap-2 sm:flex">
-          <span className="rounded-full border border-royal-500/40 bg-royal-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-widest text-royal-300">
+        <div className="ml-auto flex items-center gap-2.5">
+          <span className="hidden rounded-full border border-royal-500/40 bg-royal-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-widest text-royal-300 sm:inline-block">
             {NETWORK}
           </span>
           {configured ? (
@@ -103,15 +109,37 @@ export function AppHeader() {
               href={explorerAddress(VOTEGUARD)}
               target="_blank"
               rel="noreferrer"
-              className="font-mono text-[11px] text-ink-400 transition-colors hover:text-ink-200"
+              className="hidden font-mono text-[11px] text-ink-400 transition-colors hover:text-ink-200 lg:inline-block"
               title={VOTEGUARD}
             >
               {shortAddress(VOTEGUARD)}
             </a>
           ) : null}
+          <ConnectWallet />
         </div>
       </div>
+      <MobileNav />
     </header>
+  );
+}
+
+/** The nav the header drops below `sm`, kept reachable rather than hidden. */
+function MobileNav() {
+  return (
+    <nav className="flex items-center gap-1 border-t border-ink-700/40 px-3 py-1.5 text-sm sm:hidden">
+      {NAV.map((n) => (
+        <Link
+          key={n.href}
+          href={n.href}
+          className="rounded px-2.5 py-1.5 text-ink-300 transition-colors hover:text-white"
+        >
+          {n.label}
+        </Link>
+      ))}
+      <span className="ml-auto rounded-full border border-royal-500/40 bg-royal-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-royal-300">
+        {NETWORK}
+      </span>
+    </nav>
   );
 }
 

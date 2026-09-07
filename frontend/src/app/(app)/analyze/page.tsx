@@ -41,6 +41,9 @@ const PLATFORMS = [
 export default async function AnalyzePage() {
   const config = await getConfig();
   const fee = gen(config?.fee_wei);
+  // The raw wei goes to the form as well: `gen()` is lossy on purpose, and the
+  // value attached to the call has to be the exact figure the contract checks.
+  const feeWei = String(config?.fee_wei ?? "0");
   const paused = Boolean(config?.paused);
   const cooldown = Number(config?.limits?.proposal_cooldown_seconds ?? 900);
   const rateLimit = Number(config?.limits?.rate_limit_seconds ?? 300);
@@ -70,7 +73,7 @@ export default async function AnalyzePage() {
       ) : null}
 
       <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr]">
-        <AnalyzeForm fee={fee} paused={paused} />
+        <AnalyzeForm fee={fee} feeWei={feeWei} paused={paused} />
 
         <aside className="space-y-6">
           <section className="card rounded-lg p-5">
