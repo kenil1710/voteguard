@@ -205,6 +205,12 @@ if out=$(python3 test/test_logic.py 2>&1 | tail -3); then
 else
   bad "offline suite FAILS"
 fi
+if out=$(node test/wallet_settle.mjs 2>&1 | tail -3); then
+  n=$(printf '%s' "$out" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+')
+  ok "the submit-settlement suite passes ($n checks)"
+else
+  bad "the submit-settlement suite FAILS"
+fi
 check "the live suite exists" "[ -f test/e2e.mjs ]"
 check "fixtures were captured from the real platforms" \
   "python3 -c \"import json;d=json.load(open('test/fixtures.json'));assert d['snapshot_aave_arc']['status']==200;assert d['discourse_arbitrum']['status']==200;assert d['tally_uniswap_86']['status']==200\""

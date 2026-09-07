@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useWallet } from "./WalletProvider";
-import { refreshAfterAnalysis } from "@/app/(app)/actions";
+import { confirmAnalysis, refreshAfterAnalysis } from "@/app/(app)/actions";
 import { submitAnalysis, type SubmitResult } from "@/lib/wallet";
 import { explorerTx } from "@/lib/genlayer";
 import { gen } from "@/lib/format";
@@ -80,13 +80,15 @@ export function AnalyzeForm({
     setResult(null);
     setPendingHash(null);
     try {
-      const out = await submitAnalysis(
-        account,
-        url.trim(),
-        dao.trim(),
-        BigInt(feeWei || "0"),
-        setPendingHash,
-      );
+      const target = url.trim();
+      const out = await submitAnalysis(account, target, dao.trim(), BigInt(feeWei || "0"), {
+        // What this URL already pointed at, from the free preview. A refused
+        // re-analysis would otherwise read as a success, because the contract
+        // still holds the assessment that was already there.
+        previousAssessmentId: preview?.latest_assessment_id ?? null,
+        confirm: () => confirmAnalysis(target),
+        onHash: setPendingHash,
+      });
       setResult(out);
       // The proposal list and the DAO pages are server-cached reads. The
       // action expires them on the server; refresh() then re-pulls them into
@@ -350,9 +352,11 @@ function SubmitOutcome({ result }: { result: SubmitResult | null }) {
           {result.reason}
         </p>
         <p className="mt-2 text-[12px] leading-relaxed text-ink-400">
-          {gen(result.refundWei)} GEN was credited back to you — claim it with{" "}
-          <code className="font-mono">claim_refund()</code>. The transaction
-          itself succeeded; nothing reverted while holding your money.
+          {result.refundWei !== null
+            ? `${gen(result.refundWei)} GEN was credited back to you — claim it with claim_refund(). `
+            : "Anything you sent was credited back to you, claimable with claim_refund(). "}
+          The transaction itself succeeded; no path that takes money can revert
+          while holding it. Nothing was stored, so nothing was charged for.
         </p>
         <a
           href={explorerTx(result.hash)}
@@ -371,23 +375,16 @@ function SubmitOutcome({ result }: { result: SubmitResult | null }) {
       <p className="text-sm font-semibold text-[color:var(--color-verdict-good)]">
         Assessed on chain.
       </p>
-      {result.assessmentId ? (
-        <Link
-          href={`/proposal/${result.assessmentId}`}
-          className="mt-1.5 inline-block text-[13px] font-semibold text-royal-300 hover:text-royal-200"
-        >
-          View assessment #{result.assessmentId} →
-        </Link>
-      ) : (
-        <p className="mt-1 text-[13px] leading-relaxed text-ink-300">
-          The round settled. This network does not return the record with the
-          receipt, so open{" "}
-          <Link href="/proposals" className="font-semibold text-royal-300">
-            the proposal list
-          </Link>{" "}
-          to read it.
-        </p>
-      )}
+      <p className="mt-1 text-[12px] leading-relaxed text-ink-300">
+        Confirmed by reading the record back from the contract, not by trusting
+        the receipt.
+      </p>
+      <Link
+        href={`/proposal/${result.assessmentId}`}
+        className="mt-1.5 inline-block text-[13px] font-semibold text-royal-300 hover:text-royal-200"
+      >
+        View assessment #{result.assessmentId} →
+      </Link>
       <a
         href={explorerTx(result.hash)}
         target="_blank"

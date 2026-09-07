@@ -133,8 +133,11 @@ export async function getBalance(account: `0x${string}`): Promise<bigint | null>
  * back to them.
  */
 export type SubmitResult =
-  | { kind: "ok"; hash: string; assessmentId: number | null }
-  | { kind: "rejected"; hash: string; reason: string; refundWei: string }
+  /** The contract stored an assessment. Confirmed by reading it back. */
+  | { kind: "ok"; hash: string; assessmentId: number }
+  /** The transaction succeeded; the contract declined and credited the fee back. */
+  | { kind: "rejected"; hash: string; reason: string; refundWei: string | null }
+  /** The transaction never settled, or never left the wallet. */
   | { kind: "failed"; hash: string | null; error: string };
 
 const STATUS_NAMES = [
@@ -195,7 +198,18 @@ export async function submitAnalysis(
   url: string,
   dao: string,
   feeWei: bigint,
-  onHash?: (hash: string) => void,
+  opts: {
+    /**
+     * The newest assessment id this URL already had, from the free preview.
+     * Without it a refused re-analysis reads as a success, because
+     * `get_assessment_by_url` happily returns the assessment that was already
+     * there.
+     */
+    previousAssessmentId: number | null;
+    /** Server-side, uncached read of the contract's own state. */
+    confirm: () => Promise<{ assessmentId: number | null; analyzedAt: number | null }>;
+    onHash?: (hash: string) => void;
+  },
 ): Promise<SubmitResult> {
   const wallet = browserClient(account);
   const read = browserClient();
@@ -217,7 +231,7 @@ export async function submitAnalysis(
         : message,
     };
   }
-  onHash?.(hash);
+  opts.onHash?.(hash);
 
   const started = Date.now();
   for (;;) {
@@ -241,27 +255,7 @@ export async function submitAnalysis(
       return { kind: "failed", hash, error: "The transaction was canceled." };
     }
     if (name === "ACCEPTED" || name === "FINALIZED") {
-      const body = returnedPayload(tx);
-      /**
-       * Bradbury carries no readable `consensus_data`, so the return value is
-       * simply not available there. That is a property of the transport, not a
-       * refusal — the caller refetches the contract's own state instead.
-       */
-      if (!body) return { kind: "ok", hash, assessmentId: null };
-      if (String(body.status) === "REJECTED") {
-        return {
-          kind: "rejected",
-          hash,
-          reason: String(body.reason ?? "The contract turned this down."),
-          refundWei: String(body.refund_wei ?? "0"),
-        };
-      }
-      const id = Number(body.assessment_id);
-      return {
-        kind: "ok",
-        hash,
-        assessmentId: Number.isFinite(id) && id > 0 ? id : null,
-      };
+      return settle(hash, returnedPayload(tx), opts);
     }
     if (Date.now() - started > 480_000) {
       return {
@@ -272,4 +266,56 @@ export async function submitAnalysis(
       };
     }
   }
+}
+
+/**
+ * Decide what a settled transaction actually did. Exported for test/wallet_settle.mjs.
+ *
+ * THE RECEIPT IS NOT THE AUTHORITY, THE CONTRACT'S STATE IS. Bradbury returns
+ * no readable `consensus_data`, so a refusal and an unreadable reply look
+ * identical from the receipt alone — and an earlier version of this function
+ * treated the unreadable case as success, which reported an assessment that was
+ * never written. Every path here therefore ends by reading the record back.
+ */
+export async function settle(
+  hash: string,
+  body: Record<string, unknown> | null,
+  opts: {
+    previousAssessmentId: number | null;
+    confirm: () => Promise<{ assessmentId: number | null; analyzedAt: number | null }>;
+  },
+): Promise<SubmitResult> {
+  const rejected = body && String(body.status) === "REJECTED";
+  const reason = rejected ? String(body.reason ?? "") : "";
+  const refundWei = rejected ? String(body.refund_wei ?? "0") : null;
+
+  /**
+   * A short retry, not a poll. The round is already ACCEPTED, so the record is
+   * there or it never will be; this only covers a node answering a read from a
+   * marginally stale view.
+   */
+  let confirmed = { assessmentId: null as number | null, analyzedAt: null as number | null };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      confirmed = await opts.confirm();
+    } catch {
+      // A failed confirmation is not a refusal. Try again, then fall through.
+    }
+    const id = confirmed.assessmentId;
+    if (id !== null && id !== opts.previousAssessmentId) {
+      return { kind: "ok", hash, assessmentId: id };
+    }
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 3000));
+  }
+
+  // Nothing new was stored. Say why if the contract told us, and say plainly
+  // that we could not read the reason if it did not.
+  return {
+    kind: "rejected",
+    hash,
+    reason:
+      reason ||
+      "The round settled without storing an assessment, and this network does not return the contract's reason with the receipt. The usual causes are the 5-minute per-wallet cooldown, the 15-minute per-proposal cooldown, or the validators agreeing the proposal could not be read.",
+    refundWei,
+  };
 }

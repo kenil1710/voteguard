@@ -93,6 +93,17 @@ export const getAssessmentByUrl = cached("assessment-url", (url: string) =>
   read<Assessment | null>("get_assessment_by_url", [url], null),
 );
 
+/**
+ * The same read, DELIBERATELY UNCACHED.
+ *
+ * Used to confirm a submission against the contract's own state. A cached read
+ * here would answer from the pre-submission snapshot and report the writer's
+ * brand-new assessment as missing — or, worse, report the assessment that was
+ * already there as if the new round had produced it.
+ */
+export const getAssessmentByUrlFresh = (url: string) =>
+  read<Assessment | null>("get_assessment_by_url", [url], null);
+
 export const getHistory = cached("history", (url: string, count: number) =>
   read<{
     found: boolean;

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidateTag } from "next/cache";
+import { getAssessmentByUrlFresh } from "@/lib/contract";
 
 /**
  * Read-your-own-writes after a submission.
@@ -17,14 +18,21 @@ import { revalidateTag } from "next/cache";
  * newer read-your-own-writes API but is scoped to the `use cache` directive
  * rather than to `unstable_cache` tags.
  *
- * The assessment's own id is deliberately not in the list. It has never been
- * cached under any key, because it did not exist until this transaction.
+ * `assessment` and `verify` are keyed per id and an earlier version of this
+ * list left them out, reasoning that a brand-new id could not already be
+ * cached. That was wrong, and it is how /proposal/4 kept reporting "No
+ * assessment #4" after the record existed: `read()` FAILS SOFT to null, so
+ * somebody who opens an id before it is minted caches the NOT-FOUND answer
+ * under those tags. Guessing the next id and looking it up is exactly what a
+ * person does while waiting for their own submission to land.
  */
 const STALE_AFTER_ANALYSIS = [
   "stats",
   "recent",
   "proposals",
+  "assessment",
   "assessment-url",
+  "verify",
   "history",
   "dao",
   "dao-index",
@@ -32,4 +40,38 @@ const STALE_AFTER_ANALYSIS = [
 
 export async function refreshAfterAnalysis(): Promise<void> {
   for (const tag of STALE_AFTER_ANALYSIS) revalidateTag(tag, { expire: 0 });
+}
+
+export type Confirmation = {
+  assessmentId: number | null;
+  analyzedAt: number | null;
+  verdict: string | null;
+  title: string | null;
+};
+
+/**
+ * Ask the CONTRACT whether a submission actually stored anything.
+ *
+ * This exists because a settled receipt is not an answer. Bradbury does not
+ * return a readable `consensus_data` payload, so "the contract said REJECTED"
+ * and "the contract's reply could not be read" arrive as the same thing — and
+ * a caller that treats the second as success reports an assessment that was
+ * never written. That is the exact shape of the failure this whole project is
+ * built around: a success that carries no information.
+ *
+ * The contract's own state is the authority, so this is what the UI believes.
+ * The read is uncached and runs on the server, like every other read the site
+ * makes.
+ */
+export async function confirmAnalysis(url: string): Promise<Confirmation> {
+  const record = await getAssessmentByUrlFresh(url);
+  if (!record?.found) {
+    return { assessmentId: null, analyzedAt: null, verdict: null, title: null };
+  }
+  return {
+    assessmentId: Number(record.assessment_id) || null,
+    analyzedAt: Number(record.analyzed_at) || null,
+    verdict: record.verdict ?? null,
+    title: record.title ?? null,
+  };
 }

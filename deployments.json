@@ -136,6 +136,12 @@
       "checks": 54,
       "source": "tools/audit.sh",
       "note": "run with --network=bradbury to also check the live contract"
+    },
+    "submit_settlement_suite": {
+      "checks": 14,
+      "failed": 0,
+      "source": "test/wallet_settle.mjs",
+      "note": "Drives the real settle() out of frontend/src/lib/wallet.ts. Bradbury returns no readable consensus_data, so a refusal and an unreadable reply arrive identically; an earlier build read that as success and showed 'Assessed on chain' for a proposal the validators had refused. The suite fails 8 of 14 against that build."
     }
   },
   "build": {
