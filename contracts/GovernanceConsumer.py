@@ -163,7 +163,6 @@ class GovernanceConsumer(gl.Contract):
 
     total_queued: u256
     total_released_wei: u256
-    total_refused: u256
 
     def __init__(self, oracle: str):
         self.owner = gl.message.sender_address
@@ -177,7 +176,6 @@ class GovernanceConsumer(gl.Contract):
         self.refunds_owed = u256(0)
         self.total_queued = u256(0)
         self.total_released_wei = u256(0)
-        self.total_refused = u256(0)
 
     # --- internals
 
@@ -414,7 +412,12 @@ class GovernanceConsumer(gl.Contract):
                        + str(int(p.max_age)) + "s this payout allows")
 
         if problem != "":
-            self.total_refused = u256(int(self.total_refused) + 1)
+            # No counter here, deliberately. This method reverts on refusal, so
+            # anything written on the way to the raise is rolled back with it —
+            # a refusal tally incremented here would read zero forever while
+            # looking like it counted. Refusals are observable where they can
+            # actually be observed: preflight() returns the same blockers
+            # without reverting, and the raise itself carries the reason.
             raise gl.vm.UserError(
                 ERR + " refused: " + problem + " (" + _short(str(p.memo), 60)
                 + ")")
@@ -528,7 +531,6 @@ class GovernanceConsumer(gl.Contract):
             "queued": len(self.payouts),
             "total_queued": int(self.total_queued),
             "total_released_wei": int(self.total_released_wei),
-            "total_refused": int(self.total_refused),
             "oracle_rubric": rubric,
             "note": "terms are snapshotted into each payout when it is queued; "
                     "set_terms moves the defaults for payouts queued after it",

@@ -81,7 +81,6 @@ class GovernanceConsumer(gl.Contract):
  refunds_owed: u256
  total_queued: u256
  total_released_wei: u256
- total_refused: u256
  def __init__(self, oracle: str):
   self.owner = gl.message.sender_address
   self.oracle = Address(str(oracle))
@@ -93,7 +92,6 @@ class GovernanceConsumer(gl.Contract):
   self.refunds_owed = u256(0)
   self.total_queued = u256(0)
   self.total_released_wei = u256(0)
-  self.total_refused = u256(0)
  def _now(self) -> int:
   return int(datetime.now(timezone.utc).timestamp())
  def _only_owner(self) -> None:
@@ -265,7 +263,6 @@ class GovernanceConsumer(gl.Contract):
    problem = ("assessment is " + str(age) + "s old, older than the "
    + str(int(p.max_age)) + "s this payout allows")
   if problem != "":
-   self.total_refused = u256(int(self.total_refused) + 1)
    raise gl.vm.UserError(
    ERR + " refused: " + problem + " (" + _short(str(p.memo), 60)
    + ")")
@@ -362,7 +359,6 @@ class GovernanceConsumer(gl.Contract):
   "queued": len(self.payouts),
   "total_queued": int(self.total_queued),
   "total_released_wei": int(self.total_released_wei),
-  "total_refused": int(self.total_refused),
   "oracle_rubric": rubric,
   "note": "terms are snapshotted into each payout when it is queued; "
                     "set_terms moves the defaults for payouts queued after it",
