@@ -47,16 +47,16 @@
       "fee": "set to 0 — the genlayer CLI hardcodes value:0n on writes, so a non-zero fee makes analyze_proposal uncallable from the command line",
       "supersedes": "0x3EA3b81B4e1e3D2a4834F88D4125Ebf3890315a7 — redeployed so the chain matches the repository byte for byte after `submitted_url` was restored to the assessment view. That earlier address holds one real assessment ([ARFC] Deploy Aave V4 on Arc, RECOMMEND 75/100, verified true) and is left standing rather than deleted, but it is NOT the build in this repo.",
       "GovernanceConsumer": {
-        "address": "0x7f5d0a398ea506BcfACE622a7139a4c0190E061b",
-        "deploy_tx": "0x809cd5fa18041dcdb05eafb38e8a8b7c6cccdb174129e5e53d3244e3e9cc8ff3",
-        "artifact_bytes": 11817,
+        "address": "0xfF6901C5cD37F683d4A5A677B422A5Ea42Ca2282",
+        "deploy_tx": "0x0c7f2c5a6082b458ff703934eef91c18e715e38fbf88eb29af1ca3be6eeb20ef",
+        "artifact_bytes": 19732,
         "oracle": "0xE6c5C4E24529fd445AEb8083729Ca89773806fa3",
-        "verified": "STALE — the code at this address is the PRE-REVIEW artifact (sha256 6cd7ce8e…7b86, 11,817 bytes). build/GovernanceConsumer.min.py is now 19,732 bytes (sha256 108f5434…) and carries the three reviewer fixes; a consumer-only redeploy is pending. tools/verify_onchain.py will report the difference until then.",
-        "wiring_proof": "get_terms returns oracle_rubric {rubric_version 1.0.0, thresholds RECOMMEND 70 / CAUTION 45}, read ACROSS the contract boundary — so the pair is wired to each other and not merely deployed at two addresses.",
+        "explorer": "https://explorer-bradbury.genlayer.com/address/0xfF6901C5cD37F683d4A5A677B422A5Ea42Ca2282",
+        "verified": "byte-identical to build/GovernanceConsumer.min.py (sha256 108f5434…3117, 19,732 bytes), read back with tools/verify_onchain.py",
+        "wiring_proof": "get_terms returns oracle_rubric {rubric_version 1.0.0, thresholds RECOMMEND 70 / CAUTION 45} read ACROSS the contract boundary — so the pair is wired to each other and not merely deployed at two addresses.",
+        "authorization_proof": "live on this deployment: queue_is_permissioned true, release_is_permissionless true, can_queue(owner) true, can_queue(0x…dEaD) false, get_queuers enumerable and empty, preflight_payout answers.",
         "note": "the oracle is pinned at construction; there is no setter",
-        "supersedes": "0x59A9BBB0fA44aEe2FCA390CE898F358fcB70E68B and 0x3d716C3290B15dFC25E8221cc700627f01d17988 — both ran the artifact that still carried `total_refused`, a refusal counter incremented on the line before release() raises. release() reverts on refusal, so the increment was rolled back with it: the field read zero forever while looking like it counted. It is gone; refusals are observable through preflight(), which returns the same blockers without reverting, and through the revert message itself. Both addresses are left standing rather than deleted, but neither is the build in this repo.",
-        "pending_redeploy": "node test/deploy.mjs --network=bradbury --keystore=<name> --only=consumer --oracle=0xE6c5C4E24529fd445AEb8083729Ca89773806fa3",
-        "pending_reason": "authorised queueing (owner or whitelist), payment terms bound to the assessment actually made, and the evidence digest pinned at queue time so a later re-analysis cannot settle an old authorisation. The oracle at 0xE6c5C4E2… is UNCHANGED — build/VoteGuard.min.py is still sha256 f61564fb…, byte-identical to what is deployed."
+        "supersedes": "0x7f5d0a398ea506BcfACE622a7139a4c0190E061b — the pre-review treasury. Its queue_payout was permissionless, its payouts were bound to a proposal URL rather than to the assessment actually made, and release re-read the LATEST assessment for that URL, so analyse → queue → re-analyse → release settled on an authorisation the treasury never granted. This build gates queueing on the owner or a whitelisted address, binds recipient/amount/purpose to one assessment_id, and pins that assessment's content_hash at queue time. Earlier still: 0x59A9BBB0fA44aEe2FCA390CE898F358fcB70E68B and 0x3d716C3290B15dFC25E8221cc700627f01d17988, which carried the counter-before-revert. All are left standing rather than deleted, but none is the build in this repo."
       },
       "evidence": {
         "note": "Three REAL governance proposals, analysed by Bradbury validators on this deployment. Each recomputes from its own stored evidence on chain: `genlayer call <addr> verify_assessment --args <id>` returns verified true with no differences.",
@@ -99,7 +99,7 @@
         "tally_on_bradbury": "NOT analysed on Bradbury. The Tally path IS proven on Studionet — the live suite assessed www.tally.xyz/gov/uniswap/proposal/86 successfully as part of its 97 passing checks — but every Bradbury attempt during this session hit the node's gas-rate limit (\"node is at capacity\") and the 225 KB page makes it the heaviest of the three fetches. Recorded as not done rather than described as done.",
         "network_conditions": "Bradbury was congested throughout: `transaction gas rate limit exceeded: node is at capacity, retry in ~858ms` on most submissions, and one round reported LEADER_TIMEOUT and then settled anyway after rotation. The CLI's exit status is not a reliable signal on this network; the contract's own state is."
       },
-      "deployed_at": "2026-09-07T05:34:05.705Z"
+      "deployed_at": "2026-09-11T05:30:22.502Z"
     }
   },
   "tagline": "Every proposal deserves a second opinion.",

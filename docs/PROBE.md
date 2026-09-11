@@ -338,6 +338,45 @@ corpus-wide flag counter came out in favour of putting `flags` on every row.
 
 ---
 
+## 11. `genlayer call` is not a reliable witness; the pinned client is
+
+Measured 2026-09-11, while auditing the redeployed treasury. The globally
+installed CLI, `genlayer 0.40.0-rc.3`, fails **every** read on Bradbury:
+
+```
+$ genlayer call <GovernanceConsumer> get_terms
+ValueError: call to private method `Contract.__handle_undefined_method__`
+            call to private method `Contract.__receive__`
+```
+
+The first instinct is that the new deployment is broken. It is not, and the
+control proves it: the **same error comes back from VoteGuard**, whose code has
+not changed since the day it answered `get_config` for this same audit, and
+which `tools/verify_onchain.py` still confirms is byte-identical to
+`build/VoteGuard.min.py`. A failure that reproduces on an untouched contract is
+not a property of the contract under test.
+
+The same two reads succeed immediately through **genlayer-js 1.1.8**, which
+`test/package.json` pins:
+
+```
+ORACLE   get_config : OK  rubric_version 1.0.0
+CONSUMER get_terms  : OK  queue_is_permissioned true, release_is_permissionless true
+```
+
+So the runner resolves these methods perfectly well; the release-candidate CLI
+encodes the call in a way this runner rejects. `tools/audit.sh --network=…`
+therefore reads through `test/gl_read.mjs` and the pinned library, not through
+whatever `genlayer` happens to be on PATH — an audit that shells out to an
+unpinned binary reports the binary's health, not the deployment's, and would
+have reported a perfectly good treasury as dead on arrival.
+
+The lesson generalises past this one CLI: **a verification tool needs a control
+as much as the thing it verifies does.** One unchanged contract in the same
+audit run is enough to tell a chain problem from a client problem.
+
+---
+
 ## Reproducing this
 
 ```bash
@@ -369,6 +408,11 @@ genlayer write $J probe_quotes  --args "https://snapshot.org/#/x/proposal/$V"
 # 5. what the runner exposes for a contract's own balance (spoiler: nothing)
 genlayer deploy --contract contracts/_bal_probe.py
 genlayer write <address> probe && genlayer call <address> get
+
+# 6. finding 11 — the CLI fails where the pinned client succeeds. Run BOTH
+#    against the unchanged oracle, not only against the contract you suspect.
+genlayer call 0xE6c5C4E24529fd445AEb8083729Ca89773806fa3 get_config     # fails
+(cd test && node gl_read.mjs 0xE6c5C4E24529fd445AEb8083729Ca89773806fa3 get_config)  # works
 ```
 
 The probe contracts are kept in the repository deliberately. They are not part

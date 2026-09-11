@@ -379,8 +379,12 @@ section "8. the LIVE deployment"
 if [ -z "$NETWORK" ]; then
   skip "live contract checks (pass --network=bradbury)"
 else
-  net="$NETWORK"; [ "$net" = "bradbury" ] && net="testnet-bradbury"
-  genlayer network set "$net" >/dev/null 2>&1
+  # Reads go through genlayer-js 1.1.8, which this repo PINS, not through
+  # whatever `genlayer` is on PATH. CLI 0.40.0-rc.3 fails method resolution on
+  # every contract on Bradbury — VoteGuard included, whose code has not changed
+  # since it last answered — so a CLI-based audit reports the CLI's health
+  # rather than the deployment's. See test/gl_read.mjs.
+  gl() { (cd test && node gl_read.mjs --network="$NETWORK" "$@" 2>&1); }
   ADDR=$(python3 -c "import json;print(json.load(open('deployments.json'))['deployments']['$NETWORK']['VoteGuard']['address'])" 2>/dev/null)
   CADDR=$(python3 -c "import json;print(json.load(open('deployments.json'))['deployments']['$NETWORK']['GovernanceConsumer']['address'])" 2>/dev/null)
   if [ -z "$ADDR" ]; then
@@ -392,11 +396,11 @@ else
     else
       bad "the code at $ADDR DIFFERS from build/VoteGuard.min.py"
     fi
-    cfg=$(genlayer call "$ADDR" get_config 2>/dev/null)
+    cfg=$(gl "$ADDR" get_config)
     echo "$cfg" | grep -q "rubric_version" && ok "get_config answers on chain" || bad "get_config is dead on chain"
-    stats=$(genlayer call "$ADDR" get_stats 2>/dev/null)
+    stats=$(gl "$ADDR" get_stats)
     echo "$stats" | grep -q "total_analyzed" && ok "get_stats answers on chain" || bad "get_stats is dead on chain"
-    n=$(echo "$stats" | grep -oE 'total_analyzed: [0-9]+' | grep -oE '[0-9]+')
+    n=$(echo "$stats" | grep -oE '"total_analyzed": *[0-9]+' | grep -oE '[0-9]+$')
     if [ "${n:-0}" -ge 3 ]; then ok "the live contract holds $n real assessments"
     else bad "the live contract holds only ${n:-0} assessments (want 3+)"; fi
   fi
@@ -406,24 +410,38 @@ else
     else
       bad "the code at $CADDR DIFFERS from build/GovernanceConsumer.min.py"
     fi
-    terms=$(genlayer call "$CADDR" get_terms 2>/dev/null)
+    terms=$(gl "$CADDR" get_terms)
+    echo "$terms" | grep -qi "\"oracle\": *\"$ADDR\"" && ok "the live consumer points at the live VoteGuard" \
+      || bad "the live consumer's oracle is not $ADDR"
     echo "$terms" | grep -q "oracle_rubric" && ok "get_terms answers on chain" || bad "get_terms is dead on chain"
     echo "$terms" | grep -qi "rubric_version" && ok "the consumer reads the oracle ACROSS the contract boundary" \
       || bad "the consumer cannot read the oracle"
-    echo "$terms" | grep -q "oracle_is_immutable: true" && ok "the consumer's oracle is pinned" \
+    echo "$terms" | grep -q '"oracle_is_immutable": true' && ok "the consumer's oracle is pinned" \
       || bad "the consumer does not report a pinned oracle"
-    echo "$terms" | grep -q "queue_is_permissioned: true" && ok "queueing is permissioned on chain" \
+    echo "$terms" | grep -q '"queue_is_permissioned": true' && ok "queueing is permissioned on chain" \
       || bad "the live consumer does not report a permissioned queue"
-    echo "$terms" | grep -q "release_is_permissionless: true" && ok "releasing is permissionless on chain" \
+    echo "$terms" | grep -q '"release_is_permissionless": true' && ok "releasing is permissionless on chain" \
       || bad "the live consumer does not report a permissionless release"
     OWNER_ADDR=$(python3 -c "import json;print(json.load(open('deployments.json'))['deployments']['$NETWORK'].get('owner',''))" 2>/dev/null)
     if [ -n "$OWNER_ADDR" ]; then
-      genlayer call "$CADDR" can_queue "$OWNER_ADDR" 2>/dev/null | grep -q "can_queue: true" \
+      gl "$CADDR" can_queue "$OWNER_ADDR" | grep -q '"can_queue": true' \
         && ok "the deploying owner may queue on chain" || bad "the owner cannot queue on chain"
     fi
-    genlayer call "$CADDR" can_queue "0x000000000000000000000000000000000000dEaD" 2>/dev/null \
-      | grep -q "can_queue: false" && ok "an address nobody whitelisted may NOT queue on chain" \
+    gl "$CADDR" can_queue "0x000000000000000000000000000000000000dEaD" | grep -q '"can_queue": false' \
+      && ok "an address nobody whitelisted may NOT queue on chain" \
       || bad "an unauthorised address can queue on chain"
+    gl "$CADDR" get_queuers | grep -q '"max_queuers"' \
+      && ok "the whitelist is enumerable on chain" || bad "get_queuers is dead on chain"
+    gl "$CADDR" preflight_payout 0 | grep -q '"would_release"' \
+      && ok "preflight_payout answers on chain" || bad "preflight_payout is dead on chain"
+
+    # The frontend has to point at the SAME consumer the repository records, or
+    # the site is a working demo of a contract nobody audited.
+    envc=$(grep -hoE 'NEXT_PUBLIC_CONSUMER=0x[a-fA-F0-9]{40}' frontend/.env.local 2>/dev/null | head -1 | cut -d= -f2)
+    if [ -z "$envc" ]; then skip "frontend consumer address"
+    elif [ "$(echo "$envc" | tr 'A-Z' 'a-z')" = "$(echo "$CADDR" | tr 'A-Z' 'a-z')" ]; then
+      ok "frontend/.env.local points at the recorded consumer"
+    else bad "frontend/.env.local points at $envc, deployments.json records $CADDR"; fi
   else
     skip "consumer live checks"
   fi

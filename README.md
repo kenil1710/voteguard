@@ -193,7 +193,7 @@ python3 tools/verify_onchain.py <addr> build/VoteGuard.min.py
 | | Address |
 |---|---|
 | VoteGuard | [`0xE6c5C4E2…06fa3`](https://explorer-bradbury.genlayer.com/address/0xE6c5C4E24529fd445AEb8083729Ca89773806fa3) |
-| GovernanceConsumer | [`0x7f5d0a39…E061b`](https://explorer-bradbury.genlayer.com/address/0x7f5d0a398ea506BcfACE622a7139a4c0190E061b) |
+| GovernanceConsumer | [`0xfF6901C5…a2282`](https://explorer-bradbury.genlayer.com/address/0xfF6901C5cD37F683d4A5A677B422A5Ea42Ca2282) |
 
 Three real governance proposals are assessed on that deployment, each of which
 recomputes from its own stored evidence on chain:
