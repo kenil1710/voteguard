@@ -197,6 +197,126 @@ check "GovernanceConsumer has no set_oracle" \
   "! grep -qE 'def set_oracle' contracts/GovernanceConsumer.py"
 
 # ---------------------------------------------------------------------------
+section "4b. the reviewer's treasury findings, checked against the AST"
+# ---------------------------------------------------------------------------
+treas=$(python3 - <<'PY'
+import ast, json
+bad = []
+for path in ("contracts/GovernanceConsumer.py", "build/GovernanceConsumer.min.py"):
+    tree = ast.parse(open(path).read())
+    fns = {n.name: n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
+    pub = {n.name for n in fns.values()
+           if any("public" in ast.dump(d) for d in n.decorator_list)}
+    # The artifact keeps public method names and mangles everything else, so
+    # the private fields are looked up through the emitted map rather than
+    # guessed. Checking the SOURCE only would leave the file that actually runs
+    # unchecked, which is the whole reason this section exists.
+    names = json.load(open("build/GovernanceConsumer.names.json")) \
+        if path.endswith(".min.py") else {}
+    owner_f = names.get("owner", "owner")
+    queuers_f = names.get("queuers", "queuers")
+    q = fns.get("queue_payout")
+    if q is None:
+        bad.append(path + ": no queue_payout")
+    else:
+        # Follow queue_payout's own self-calls to the helper that reads BOTH
+        # the owner and the whitelist: that is the gate, whatever it is called.
+        gated = False
+        for c in ast.walk(q):
+            if (isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute)
+                    and isinstance(c.func.value, ast.Name)
+                    and c.func.value.id == "self"):
+                h = fns.get(c.func.attr)
+                if h is None:
+                    continue
+                reads = {a.attr for a in ast.walk(h) if isinstance(a, ast.Attribute)}
+                if owner_f in reads and queuers_f in reads:
+                    gated = True
+        if not gated:
+            bad.append(path + ": queue_payout is not gated on the owner/whitelist")
+        if len(q.args.args) != 6:
+            bad.append(path + ": queue_payout takes " + str(len(q.args.args) - 1)
+                       + " args, want url, memo, recipient, amount, assessment_id")
+    r = fns.get("release")
+    if r is None:
+        bad.append(path + ": no release")
+    else:
+        if len(r.args.args) != 5:
+            bad.append(path + ": release takes " + str(len(r.args.args) - 1)
+                       + " args, want payout_id, recipient, amount_wei, assessment_id")
+        if any(isinstance(d, ast.Attribute) and d.attr == "payable"
+               for d in r.decorator_list):
+            bad.append(path + ": release is payable")
+    for want in ("authorize_queuer", "revoke_queuer", "can_queue",
+                 "get_queuers", "preflight_payout"):
+        if want not in pub:
+            bad.append(path + ": " + want + " is not a public method")
+print("|".join(bad))
+PY
+)
+if [ -z "$treas" ]; then ok "queue_payout is gated, release states its terms, and the whitelist is public"
+else bad "treasury authorisation: $treas"; fi
+
+pin=$(python3 - <<'PY'
+import ast
+bad = []
+tree = ast.parse(open("contracts/GovernanceConsumer.py").read())
+fns = {n.name: n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
+check = fns.get("_settle_check")
+if check is None:
+    bad.append("no _settle_check: release's rules must live in one place")
+else:
+    names = {a.attr for a in ast.walk(check) if isinstance(a, ast.Attribute)}
+    for want in ("evidence_digest", "assessment_id", "proposal_key"):
+        if want not in names:
+            bad.append("_settle_check never reads " + want)
+    calls = {c.func.attr for c in ast.walk(check)
+             if isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute)}
+    if "_assessment" not in calls:
+        bad.append("_settle_check does not read the assessment BY ID")
+for name in ("release", "preflight_payout"):
+    fn = fns.get(name)
+    if fn is None:
+        bad.append("no " + name)
+        continue
+    calls = {c.func.attr for c in ast.walk(fn)
+             if isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute)}
+    if "_settle_check" not in calls:
+        bad.append(name + " does not go through _settle_check")
+q = fns.get("queue_payout")
+if q is None or not any(isinstance(n, ast.Attribute) and isinstance(n.ctx, ast.Store)
+                        and n.attr == "evidence_digest" for n in ast.walk(q)):
+    bad.append("queue_payout does not pin an evidence_digest")
+print("|".join(bad))
+PY
+)
+if [ -z "$pin" ]; then ok "the evidence digest is pinned at queue time and checked by id at release"
+else bad "assessment pinning: $pin"; fi
+
+counters=$(python3 - <<'PY'
+import ast
+FIELDS = {"total_queued", "total_released_wei", "total_analyzed",
+          "total_fees_wei", "refunds_owed", "committed_wei", "balance_wei"}
+bad = []
+for path in ("contracts/VoteGuard.py", "contracts/GovernanceConsumer.py"):
+    for fn in ast.walk(ast.parse(open(path).read())):
+        if not isinstance(fn, ast.FunctionDef):
+            continue
+        raises = [n.lineno for n in ast.walk(fn) if isinstance(n, ast.Raise)]
+        if not raises:
+            continue
+        last = max(raises)
+        for n in ast.walk(fn):
+            if (isinstance(n, ast.Attribute) and isinstance(n.ctx, ast.Store)
+                    and n.attr in FIELDS and n.lineno < last):
+                bad.append(path + ":" + fn.name + ":" + str(n.lineno) + " " + n.attr)
+print("|".join(bad))
+PY
+)
+if [ -z "$counters" ]; then ok "no counter is written before a revert (a rolled-back tally reads zero forever)"
+else bad "counter before revert: $counters"; fi
+
+# ---------------------------------------------------------------------------
 section "5. the test suites"
 # ---------------------------------------------------------------------------
 if out=$(python3 test/test_logic.py 2>&1 | tail -3); then
@@ -230,6 +350,8 @@ check "the probe contracts are kept as evidence" \
 check "PROBE.md records the SPA finding" "grep -q '1,363' docs/PROBE.md"
 check "PROBE.md records the measured size ceiling" "grep -q '52,804' docs/PROBE.md || grep -q '53,200' docs/PROBE.md"
 check "NOTES.md records the one-rung tolerance" "grep -qi 'one-rung' contracts/NOTES.md"
+check "NOTES.md records the treasury authorisation finding" \
+  "grep -qi 'Pinned evidence' contracts/NOTES.md"
 
 # ---------------------------------------------------------------------------
 section "7. the frontend"
@@ -290,6 +412,18 @@ else
       || bad "the consumer cannot read the oracle"
     echo "$terms" | grep -q "oracle_is_immutable: true" && ok "the consumer's oracle is pinned" \
       || bad "the consumer does not report a pinned oracle"
+    echo "$terms" | grep -q "queue_is_permissioned: true" && ok "queueing is permissioned on chain" \
+      || bad "the live consumer does not report a permissioned queue"
+    echo "$terms" | grep -q "release_is_permissionless: true" && ok "releasing is permissionless on chain" \
+      || bad "the live consumer does not report a permissionless release"
+    OWNER_ADDR=$(python3 -c "import json;print(json.load(open('deployments.json'))['deployments']['$NETWORK'].get('owner',''))" 2>/dev/null)
+    if [ -n "$OWNER_ADDR" ]; then
+      genlayer call "$CADDR" can_queue "$OWNER_ADDR" 2>/dev/null | grep -q "can_queue: true" \
+        && ok "the deploying owner may queue on chain" || bad "the owner cannot queue on chain"
+    fi
+    genlayer call "$CADDR" can_queue "0x000000000000000000000000000000000000dEaD" 2>/dev/null \
+      | grep -q "can_queue: false" && ok "an address nobody whitelisted may NOT queue on chain" \
+      || bad "an unauthorised address can queue on chain"
   else
     skip "consumer live checks"
   fi

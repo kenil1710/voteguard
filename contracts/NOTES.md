@@ -136,18 +136,28 @@ because the artifact is what actually runs.
 
 `release` on the consumer is deliberately the exception: it is not payable and
 it *does* revert, because reverting is the entire point of a hard gate. A caller
-that wants a boolean has `preflight` for free.
+that wants a boolean has `preflight` — or, for one already-queued payout with
+its authorisation checks included, `preflight_payout` — for free.
+
+The authorisation gate added in §14 keeps this shape: an unauthorised
+`queue_payout` is a *rejection with a full refund*, not a revert. Refusing to
+let somebody spend the treasury is not a reason to keep the deposit they
+attached.
 
 ---
 
 ## 9. What the owner can and cannot do
 
 Can: set the fee within `0..MAX_FEE_WEI`, pause new analysis, transfer
-ownership, withdraw `balance_wei - refunds_owed`.
+ownership, withdraw `balance_wei - refunds_owed`. On the treasury: move the
+DEFAULT terms, and add or remove a whitelisted queuer (§14).
 
 Cannot: move a weight, a threshold, a ladder or a bucket boundary — they are
 module constants; write or alter any stored assessment; block a read, a
-verification, a refund or `settle_stalled`; reach a wei of `refunds_owed`.
+verification, a refund or `settle_stalled`; reach a wei of `refunds_owed`. On
+the treasury: reach a wei of `committed_wei`, change the terms or the
+authorisation of a payout already queued, or stop anyone releasing one — not by
+revoking the queuer who queued it, and not by declining to press the button.
 
 Two AST tests enforce the first two: no `_only_owner`-gated method may write a
 verdict, score, feed or refund field, and no function anywhere may assign to a
@@ -209,7 +219,60 @@ version fired on twenty of those twenty-four.
 
 ---
 
-## 14. Known limits
+## 14. The treasury path: who may spend, and against what
+
+Reviewer finding, on `GovernanceConsumer`: *"authorize who may queue spending
+from existing treasury funds, bind each recipient, amount, and purpose to the
+proposal actually assessed, and pin the assessment or immutable evidence digest
+used for release so later re-analysis cannot change the authorization."*
+
+Three separate things, and they fail in three different ways.
+
+**Who may spend.** `queue_payout` moves existing treasury funds into a
+commitment, which is a privileged act, so it is gated on the owner or an address
+the owner has whitelisted with `authorize_queuer`. `release` is deliberately NOT
+gated. Pressing the button on a payout the oracle has already approved is not
+discretion, and a treasury whose owner can sit on a valid payout has moved the
+discretion somewhere less visible rather than removing it. Revoking a queuer
+says so in its return value: it reaches future queues only, and the payouts that
+address already queued stay releasable by anyone.
+
+**Bound to the proposal assessed.** A queue names an `assessment_id`. The
+contract fetches that assessment across the boundary and compares its
+`proposal_key` with the key the submitted URL resolves to — the ORACLE's
+canonicalisation of both, because this treasury does not parse URLs and must not
+start; a second parser is a second answer. Only then are the recipient, the
+amount and the purpose recorded against it. A good assessment of the wrong
+proposal cannot authorise this payout, and a blank purpose cannot be bound at
+all.
+
+**Pinned evidence.** The assessment's `content_hash` — §2's hash of the
+canonical key and the parsed feature vector — is copied into the record at queue
+time, and `release` refuses unless the assessment governing that proposal still
+hashes to it. This closes the replay: analyse, queue against a good result,
+re-analyse into a different one, release on the stale authorisation. The test
+that matters is the one where the *re-analysis still says RECOMMEND* and the
+release still fails; a verdict check would pass it, and only the digest catches
+it.
+
+The digest is the authority, not the id. A re-run that lands on the identical
+feature vector has changed nothing that was authorised and still releases;
+anything else invalidates the authorisation, and the way forward is a new queue
+against the assessment that holds now, granted by somebody who may grant one.
+
+**Release states its terms.** `release(payout_id, recipient, amount_wei,
+assessment_id)` — the last three are not inputs to the decision, the record
+holds all three and the record is the authority. They are an assertion, so a
+caller whose idea of the payout has drifted gets a revert instead of a surprise
+transfer.
+
+**And none of it can freeze money.** If a re-analysis strands a payout, the
+commitment is still recoverable: `cancel_payout` frees it for the queuer or the
+owner. Pinning buys safety, not a lock.
+
+---
+
+## 15. Known limits
 
 * **One document.** Discussion threads, vote history and linked specifications
   are not read. A proposal is judged on its own terms.

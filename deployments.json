@@ -10,10 +10,10 @@
     },
     "build/GovernanceConsumer.min.py": {
       "source": "contracts/GovernanceConsumer.py",
-      "bytes": 11817,
-      "sha256": "6cd7ce8e46212d8f555e68fcd0d6718bdbe5163a822831de918df0fe63d47b86",
-      "source_sha256": "351eb2da5d4093eab5b208a709b36eb4743cdeaa06d2db301d441c060201c037",
-      "premangle_bytes": 14775
+      "bytes": 19732,
+      "sha256": "108f5434c3e92a87f3245f389235a4aa50bb5b3d5e15e038c2c3387e87b73117",
+      "source_sha256": "d91cb57f0c3f1628c4bec0a744b475ff690f6143006804ed01375145b331b908",
+      "premangle_bytes": 24512
     }
   },
   "deployments": {
@@ -51,10 +51,12 @@
         "deploy_tx": "0x809cd5fa18041dcdb05eafb38e8a8b7c6cccdb174129e5e53d3244e3e9cc8ff3",
         "artifact_bytes": 11817,
         "oracle": "0xE6c5C4E24529fd445AEb8083729Ca89773806fa3",
-        "verified": "byte-identical to build/GovernanceConsumer.min.py (sha256 6cd7ce8e…7b86), read back with tools/verify_onchain.py",
+        "verified": "STALE — the code at this address is the PRE-REVIEW artifact (sha256 6cd7ce8e…7b86, 11,817 bytes). build/GovernanceConsumer.min.py is now 19,732 bytes (sha256 108f5434…) and carries the three reviewer fixes; a consumer-only redeploy is pending. tools/verify_onchain.py will report the difference until then.",
         "wiring_proof": "get_terms returns oracle_rubric {rubric_version 1.0.0, thresholds RECOMMEND 70 / CAUTION 45}, read ACROSS the contract boundary — so the pair is wired to each other and not merely deployed at two addresses.",
         "note": "the oracle is pinned at construction; there is no setter",
-        "supersedes": "0x59A9BBB0fA44aEe2FCA390CE898F358fcB70E68B and 0x3d716C3290B15dFC25E8221cc700627f01d17988 — both ran the artifact that still carried `total_refused`, a refusal counter incremented on the line before release() raises. release() reverts on refusal, so the increment was rolled back with it: the field read zero forever while looking like it counted. It is gone; refusals are observable through preflight(), which returns the same blockers without reverting, and through the revert message itself. Both addresses are left standing rather than deleted, but neither is the build in this repo."
+        "supersedes": "0x59A9BBB0fA44aEe2FCA390CE898F358fcB70E68B and 0x3d716C3290B15dFC25E8221cc700627f01d17988 — both ran the artifact that still carried `total_refused`, a refusal counter incremented on the line before release() raises. release() reverts on refusal, so the increment was rolled back with it: the field read zero forever while looking like it counted. It is gone; refusals are observable through preflight(), which returns the same blockers without reverting, and through the revert message itself. Both addresses are left standing rather than deleted, but neither is the build in this repo.",
+        "pending_redeploy": "node test/deploy.mjs --network=bradbury --keystore=<name> --only=consumer --oracle=0xE6c5C4E24529fd445AEb8083729Ca89773806fa3",
+        "pending_reason": "authorised queueing (owner or whitelist), payment terms bound to the assessment actually made, and the evidence digest pinned at queue time so a later re-analysis cannot settle an old authorisation. The oracle at 0xE6c5C4E2… is UNCHANGED — build/VoteGuard.min.py is still sha256 f61564fb…, byte-identical to what is deployed."
       },
       "evidence": {
         "note": "Three REAL governance proposals, analysed by Bradbury validators on this deployment. Each recomputes from its own stored evidence on chain: `genlayer call <addr> verify_assessment --args <id>` returns verified true with no differences.",

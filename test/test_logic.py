@@ -2850,22 +2850,67 @@ def fund_consumer(cm, c, wei):
 	return c.fund()
 
 
-class TestConsumer(unittest.TestCase):
+# The actors, named once. After the reviewer's authorisation fix these are not
+# interchangeable any more: OWNER deploys and governs, QUEUER is a whitelisted
+# DAO address that may promise treasury money, STRANGER may do neither — and
+# RELEASER may still press release on an authorised payout, which is the point.
+OWNER = "0x" + "a" * 40
+QUEUER = "0x" + "b" * 40
+STRANGER = "0x" + "f" * 40
+RELEASER = "0x" + "e" * 40
+PAYEE = "0x" + "7" * 40
+
+
+class ConsumerCase(unittest.TestCase):
+	"""The shared fixture: a real VoteGuard, a real treasury wired to it, and
+	one whitelisted queuer. Every consumer battery builds on this."""
 
 	def setUp(self):
 		self.oracle, self.c, self.clock, self.cm = build_pair()
 		self.c._now = lambda: self.clock.now
+		as_sender(OWNER, 0)
+		self.c.authorize_queuer(QUEUER)
 
 	def tearDown(self):
 		ORACLE["impl"] = None
 
-	def analyse(self, levels):
-		return run_analysis(MOD, self.oracle, SNAP_URL, levels=levels)
+	def analyse(self, levels, url=SNAP_URL, sender=QUEUER):
+		return run_analysis(MOD, self.oracle, url, levels=levels, sender=sender)
 
-	def queue(self, amount=GEN, url=SNAP_URL, sender="0x" + "b" * 40, value=0):
+	def reanalyse(self, levels, url=SNAP_URL):
+		"""A SECOND analysis of the same proposal, past both cooldowns. This is
+		the move the reviewer's replay depends on, so the tests have to be able
+		to make it for real rather than describe it."""
+		self.clock.now += MOD.PROPOSAL_COOLDOWN + 1
+		return run_analysis(MOD, self.oracle, url, levels=levels,
+		                    sender="0x" + "c" * 40)
+
+	def latest_id(self, url=SNAP_URL):
+		return self.oracle.get_assessment_by_url(url).get("assessment_id", -1)
+
+	def queue(self, amount=GEN, url=SNAP_URL, sender=QUEUER, value=0,
+	          assessment_id=None, memo="grant to the working group",
+	          recipient=PAYEE):
+		"""Queue against the proposal's CURRENT assessment unless a test names
+		a different one on purpose."""
+		aid = self.latest_id(url) if assessment_id is None else assessment_id
 		as_sender(sender, value)
-		return self.c.queue_payout(url, "grant to the working group",
-		                           "0x" + "7" * 40, amount)
+		return self.c.queue_payout(url, memo, recipient, amount, aid)
+
+	def release(self, q, sender=RELEASER, recipient=None, amount=None,
+	            assessment_id=None):
+		"""Release stating the terms the record actually holds, unless a test
+		deliberately states the wrong ones."""
+		as_sender(sender, 0)
+		return self.c.release(
+			q["payout_id"],
+			q["recipient"] if recipient is None else recipient,
+			q["amount_wei"] if amount is None else amount,
+			q["authorization"]["assessment_id"] if assessment_id is None
+			else assessment_id)
+
+
+class TestConsumer(ConsumerCase):
 
 	def test_the_oracle_is_pinned_at_construction(self):
 		"""A treasury whose owner can repoint it at a friendlier oracle after
@@ -2888,27 +2933,39 @@ class TestConsumer(unittest.TestCase):
 		"""Pinning the oracle in the contract is not enough on its own: the
 		record has to carry it, or a future migration could settle an old
 		payout against a new oracle."""
+		self.analyse((1, 1, 1, 1, 1))
 		fund_consumer(self.cm, self.c, GEN)
 		q = self.queue()
 		self.assertEqual(q["terms"]["oracle"], str(self.c.oracle.as_hex))
 
-	def test_an_unknown_proposal_is_refused(self):
+	def test_an_unknown_proposal_cannot_EVEN_BE_QUEUED(self):
+		"""It used to queue and then fail at release. Binding the payout to an
+		assessment moves the refusal forward to the moment the money would be
+		committed, which is where it belongs — and it refunds."""
 		fund_consumer(self.cm, self.c, GEN)
-		got = self.queue()
-		self.assertEqual(got["status_code"], "OK")
-		with self.assertRaises(self.cm.gl.vm.UserError) as ctx:
-			self.c.release(got["payout_id"])
-		self.assertIn("no assessment",
-		              str(getattr(ctx.exception, "message", ctx.exception)))
+		as_sender(QUEUER, 7)
+		got = self.c.queue_payout(SNAP_URL, "grant", PAYEE, GEN, 0)
+		self.assertEqual(got["status"], "REJECTED")
+		self.assertEqual(got["refund_wei"], 7)
+		self.assertIn("not readable", got["reason"])
+		self.assertEqual(int(self.c.committed_wei), 0)
 
 	def test_preflight_is_free_and_agrees_with_release(self):
 		fund_consumer(self.cm, self.c, GEN)
 		pre = self.c.preflight(SNAP_URL)
 		self.assertFalse(pre["would_release"])
 		self.assertTrue(pre["blockers"])
-		got = self.queue()
-		with self.assertRaises(self.cm.gl.vm.UserError):
-			self.c.release(got["payout_id"])
+		out = self.analyse((3, 3, 3, 3, 3))
+		if out["verdict"] == "RECOMMEND":
+			self.skipTest("fixture scored RECOMMEND at the worst rungs")
+		q = self.queue()
+		pay_pre = self.c.preflight_payout(q["payout_id"])
+		self.assertFalse(pay_pre["would_release"])
+		with self.assertRaises(self.cm.gl.vm.UserError) as ctx:
+			self.release(q)
+		# the free preview and the reverting call give the SAME reason
+		self.assertIn(pay_pre["blocker"],
+		              str(getattr(ctx.exception, "message", ctx.exception)))
 
 	def test_a_recommendation_releases_the_money(self):
 		out = self.analyse((0, 0, 0, 0, 0))
@@ -2917,8 +2974,9 @@ class TestConsumer(unittest.TestCase):
 		fund_consumer(self.cm, self.c, GEN)
 		self.assertTrue(self.c.preflight(SNAP_URL)["would_release"])
 		q = self.queue()
+		self.assertTrue(self.c.preflight_payout(q["payout_id"])["would_release"])
 		before = len(TRANSFERS)
-		rel = self.c.release(q["payout_id"])
+		rel = self.release(q)
 		self.assertEqual(rel["status_code"], "RELEASED")
 		self.assertEqual(rel["verdict"], "RECOMMEND")
 		self.assertEqual(len(TRANSFERS), before + 1)
@@ -2933,7 +2991,7 @@ class TestConsumer(unittest.TestCase):
 		q = self.queue()
 		before = len(TRANSFERS)
 		with self.assertRaises(self.cm.gl.vm.UserError) as ctx:
-			self.c.release(q["payout_id"])
+			self.release(q)
 		self.assertIn(out["verdict"],
 		              str(getattr(ctx.exception, "message", ctx.exception)))
 		self.assertEqual(len(TRANSFERS), before, "no money moved on a refusal")
@@ -2941,10 +2999,11 @@ class TestConsumer(unittest.TestCase):
 	def test_terms_are_snapshotted_at_queue_time(self):
 		"""The reviewer's lesson: a beneficiary who accepted a set of
 		conditions cannot have them changed underneath them."""
+		self.analyse((1, 1, 1, 1, 1))
 		fund_consumer(self.cm, self.c, GEN)
 		q = self.queue()
 		self.assertEqual(q["terms"]["min_score"], self.cm.DEFAULT_MIN_SCORE)
-		as_sender("0x" + "a" * 40, 0)
+		as_sender(OWNER, 0)
 		moved = self.c.set_terms("RECOMMEND_OR_CAUTION", 99, 60)
 		self.assertIn("already queued", moved["applies_to"])
 		still = self.c.get_payout(q["payout_id"])
@@ -2952,8 +3011,9 @@ class TestConsumer(unittest.TestCase):
 		self.assertEqual(still["terms"]["mode"], "RECOMMEND")
 
 	def test_new_payouts_take_the_new_terms(self):
+		self.analyse((1, 1, 1, 1, 1))
 		fund_consumer(self.cm, self.c, 3 * GEN)
-		as_sender("0x" + "a" * 40, 0)
+		as_sender(OWNER, 0)
 		self.c.set_terms("RECOMMEND_OR_CAUTION", 55, 3600)
 		q = self.queue()
 		self.assertEqual(q["terms"]["mode"], "RECOMMEND_OR_CAUTION")
@@ -2962,10 +3022,10 @@ class TestConsumer(unittest.TestCase):
 	def test_caution_mode_accepts_a_caution(self):
 		out = self.analyse((1, 1, 1, 1, 1))
 		fund_consumer(self.cm, self.c, GEN)
-		as_sender("0x" + "a" * 40, 0)
+		as_sender(OWNER, 0)
 		self.c.set_terms("RECOMMEND_OR_CAUTION", 1, self.cm.MAX_ALLOWED_AGE)
 		q = self.queue()
-		rel = self.c.release(q["payout_id"])
+		rel = self.release(q)
 		self.assertEqual(rel["status_code"], "RELEASED")
 		self.assertIn(rel["verdict"], ("RECOMMEND", "CAUTION"))
 		self.assertEqual(rel["verdict"], out["verdict"])
@@ -2978,63 +3038,108 @@ class TestConsumer(unittest.TestCase):
 		q = self.queue()
 		self.clock.now += self.cm.DEFAULT_MAX_AGE + 10
 		with self.assertRaises(self.cm.gl.vm.UserError) as ctx:
-			self.c.release(q["payout_id"])
+			self.release(q)
 		self.assertIn("older than",
 		              str(getattr(ctx.exception, "message", ctx.exception)))
 
 	def test_a_score_below_the_floor_is_refused(self):
 		self.analyse((1, 1, 1, 1, 1))
 		fund_consumer(self.cm, self.c, GEN)
-		as_sender("0x" + "a" * 40, 0)
+		as_sender(OWNER, 0)
 		self.c.set_terms("RECOMMEND_OR_CAUTION", 100, self.cm.MAX_ALLOWED_AGE)
 		q = self.queue()
 		with self.assertRaises(self.cm.gl.vm.UserError) as ctx:
-			self.c.release(q["payout_id"])
+			self.release(q)
 		self.assertIn("below the required",
 		              str(getattr(ctx.exception, "message", ctx.exception)))
 
 	def test_an_unreachable_oracle_refuses_rather_than_approves(self):
-		ORACLE["impl"] = None
+		"""Both halves: a dead oracle cannot authorise a new payout, and it
+		cannot settle one that was already authorised. An oracle that cannot be
+		reached must never read as an approval."""
+		out = self.analyse((0, 0, 0, 0, 0))
+		if out["verdict"] != "RECOMMEND":
+			self.skipTest("fixture did not reach RECOMMEND")
 		fund_consumer(self.cm, self.c, GEN)
-		pre = self.c.preflight(SNAP_URL)
-		self.assertFalse(pre["would_release"])
 		q = self.queue()
+		ORACLE["impl"] = None
+		self.assertFalse(self.c.preflight(SNAP_URL)["would_release"])
+		self.assertFalse(self.c.preflight_payout(q["payout_id"])["would_release"])
 		with self.assertRaises(self.cm.gl.vm.UserError):
-			self.c.release(q["payout_id"])
+			self.release(q)
+		as_sender(QUEUER, 3)
+		dead = self.c.queue_payout(SNAP_URL, "grant", PAYEE, 1, 0)
+		self.assertEqual(dead["status"], "REJECTED")
+		self.assertEqual(dead["refund_wei"], 3)
 
 	def test_committed_money_cannot_be_withdrawn_by_the_owner(self):
+		self.analyse((1, 1, 1, 1, 1))
 		fund_consumer(self.cm, self.c, GEN)
 		self.queue(amount=GEN)
-		as_sender("0x" + "a" * 40, 0)
+		as_sender(OWNER, 0)
 		with self.assertRaises(self.cm.gl.vm.UserError):
 			self.c.withdraw_uncommitted(1)
 
 	def test_uncommitted_money_can_be_withdrawn(self):
+		self.analyse((1, 1, 1, 1, 1))
 		fund_consumer(self.cm, self.c, 2 * GEN)
 		self.queue(amount=GEN)
-		as_sender("0x" + "a" * 40, 0)
+		as_sender(OWNER, 0)
 		got = self.c.withdraw_uncommitted(GEN)
 		self.assertEqual(got["withdrawn_wei"], GEN)
 		self.assertEqual(got["uncommitted_wei"], 0)
 
 	def test_over_committing_is_refused_and_refunded(self):
+		self.analyse((1, 1, 1, 1, 1))
+		aid = self.latest_id()
 		fund_consumer(self.cm, self.c, GEN)
-		as_sender("0x" + "b" * 40, 5)
-		got = self.c.queue_payout(SNAP_URL, "too big", "0x" + "7" * 40, 9 * GEN)
+		as_sender(QUEUER, 5)
+		got = self.c.queue_payout(SNAP_URL, "too big", PAYEE, 9 * GEN, aid)
 		self.assertEqual(got["status"], "REJECTED")
 		self.assertEqual(got["refund_wei"], 5)
 
 	def test_every_queue_refusal_refunds(self):
+		"""EVERY refusal shape, the reviewer's three new ones included. A
+		payable path that keeps the money on a refusal is confiscation however
+		good the reason was."""
+		self.analyse((1, 1, 1, 1, 1))
+		aid = self.latest_id()
+		self.clock.now += 2 * HOUR
+		other = run_analysis(MOD, self.oracle, FORUM_URL,
+		                     fixture="discourse_arbitrum", sender="0x" + "d" * 40)
 		fund_consumer(self.cm, self.c, GEN)
-		bad = [("", "u", "0x" + "7" * 40, 1), ("http://x.com/a", "u", "0x" + "7" * 40, 1),
-		       ("https://a b", "u", "0x" + "7" * 40, 1),
-		       (SNAP_URL, "u", "0x" + "0" * 40, 1), (SNAP_URL, "u", "0x" + "7" * 40, 0),
-		       (SNAP_URL, "u", "0x" + "7" * 40, -5)]
-		for i, (url, memo, to, amt) in enumerate(bad):
-			as_sender("0x" + format(i + 32, "02x") * 20, 11)
-			got = self.c.queue_payout(url, memo, to, amt)
-			self.assertEqual(got["status"], "REJECTED", url)
-			self.assertEqual(got["refund_wei"], 11, url)
+		bad = [
+			("", "u", PAYEE, 1, aid, "empty url"),
+			("http://x.com/a", "u", PAYEE, 1, aid, "not https"),
+			("https://a b", "u", PAYEE, 1, aid, "spaces"),
+			(SNAP_URL, "u", "0x" + "0" * 40, 1, aid, "zero recipient"),
+			(SNAP_URL, "u", PAYEE, 0, aid, "zero amount"),
+			(SNAP_URL, "u", PAYEE, -5, aid, "negative amount"),
+			(SNAP_URL, "", PAYEE, 1, aid, "blank purpose"),
+			(SNAP_URL, "u", PAYEE, 1, -1, "negative assessment id"),
+			(SNAP_URL, "u", PAYEE, 1, 99_999, "unknown assessment id"),
+			(SNAP_URL, "u", PAYEE, 1, other["assessment_id"],
+			 "an assessment of a DIFFERENT proposal"),
+		]
+		owed = 0
+		for url, memo, to, amt, a, why in bad:
+			as_sender(QUEUER, 11)
+			got = self.c.queue_payout(url, memo, to, amt, a)
+			self.assertEqual(got["status"], "REJECTED", why)
+			self.assertEqual(got["refund_wei"], 11, why)
+			owed += 11
+			self.assertEqual(self.c.refund_of(QUEUER)["refund_wei"], owed, why)
+		self.assertEqual(int(self.c.committed_wei), 0)
+
+	def test_an_unauthorized_queue_refunds_too(self):
+		self.analyse((1, 1, 1, 1, 1))
+		fund_consumer(self.cm, self.c, GEN)
+		as_sender(STRANGER, 13)
+		got = self.c.queue_payout(SNAP_URL, "grant", PAYEE, GEN,
+		                          self.latest_id())
+		self.assertEqual(got["status"], "REJECTED")
+		self.assertEqual(got["refund_wei"], 13)
+		self.assertEqual(self.c.refund_of(STRANGER)["refund_wei"], 13)
 
 	def test_no_payable_consumer_method_raises(self):
 		tree = ast.parse(CONSUMER.read_text())
@@ -3047,19 +3152,21 @@ class TestConsumer(unittest.TestCase):
 			                  if isinstance(s, ast.Raise)], [], fn.name)
 
 	def test_a_cancelled_payout_frees_its_commitment(self):
+		self.analyse((1, 1, 1, 1, 1))
 		fund_consumer(self.cm, self.c, GEN)
 		q = self.queue(amount=GEN)
 		self.assertEqual(int(self.c.committed_wei), GEN)
-		as_sender("0x" + "b" * 40, 0)
+		as_sender(QUEUER, 0)
 		self.c.cancel_payout(q["payout_id"])
 		self.assertEqual(int(self.c.committed_wei), 0)
 		with self.assertRaises(self.cm.gl.vm.UserError):
-			self.c.release(q["payout_id"])
+			self.release(q)
 
 	def test_only_the_queuer_or_owner_may_cancel(self):
+		self.analyse((1, 1, 1, 1, 1))
 		fund_consumer(self.cm, self.c, GEN)
 		q = self.queue()
-		as_sender("0x" + "f" * 40, 0)
+		as_sender(STRANGER, 0)
 		with self.assertRaises(self.cm.gl.vm.UserError):
 			self.c.cancel_payout(q["payout_id"])
 
@@ -3069,18 +3176,22 @@ class TestConsumer(unittest.TestCase):
 			self.skipTest("fixture did not reach RECOMMEND")
 		fund_consumer(self.cm, self.c, GEN)
 		q = self.queue()
-		self.c.release(q["payout_id"])
+		self.release(q)
 		with self.assertRaises(self.cm.gl.vm.UserError):
-			self.c.release(q["payout_id"])
+			self.release(q)
 
 	def test_release_is_permissionless(self):
+		"""Gating the QUEUE did not gate the release, deliberately. A treasury
+		whose owner can sit on a payout the oracle already approved has moved
+		the discretion somewhere less visible, not removed it."""
 		out = self.analyse((0, 0, 0, 0, 0))
 		if out["verdict"] != "RECOMMEND":
 			self.skipTest("fixture did not reach RECOMMEND")
 		fund_consumer(self.cm, self.c, GEN)
 		q = self.queue()
-		as_sender("0x" + "e" * 40, 0)   # a total stranger
-		self.assertEqual(self.c.release(q["payout_id"])["status_code"],
+		# a total stranger, who may not queue and is not the owner
+		self.assertFalse(self.c.can_queue(STRANGER)["can_queue"])
+		self.assertEqual(self.release(q, sender=STRANGER)["status_code"],
 		                 "RELEASED")
 
 	def test_strict_release_is_require_recommended_across_the_boundary(self):
@@ -3097,10 +3208,10 @@ class TestConsumer(unittest.TestCase):
 		self.assertEqual(t["oracle_rubric"]["verdicts"], list(MOD.VERDICTS))
 
 	def test_set_terms_is_owner_only_and_bounded(self):
-		as_sender("0x" + "f" * 40, 0)
+		as_sender(STRANGER, 0)
 		with self.assertRaises(self.cm.gl.vm.UserError):
 			self.c.set_terms("RECOMMEND", 70, 3600)
-		as_sender("0x" + "a" * 40, 0)
+		as_sender(OWNER, 0)
 		for mode, score, age in (("NONSENSE", 70, 3600), ("RECOMMEND", 0, 3600),
 		                         ("RECOMMEND", 101, 3600), ("RECOMMEND", 70, 0),
 		                         ("RECOMMEND", 70, self.cm.MAX_ALLOWED_AGE + 1)):
@@ -3134,6 +3245,525 @@ class TestConsumer(unittest.TestCase):
 			                  if isinstance(n, ast.Call)
 			                  and isinstance(n.func, ast.Attribute)
 			                  and n.func.attr == "replace"], [], path.name)
+
+
+# ---------------------------------------------------------------------------
+# 13. The reviewer's treasury findings, each with the attack it closes
+#
+# Pavel, on the GovernanceConsumer treasury path: "authorize who may queue
+# spending from existing treasury funds, bind each recipient, amount, and
+# purpose to the proposal actually assessed, and pin the assessment or
+# immutable evidence digest used for release so later re-analysis cannot change
+# the authorization."
+#
+# Three findings, and the third is the one with teeth: analyse a proposal into
+# a RECOMMEND, queue a payout against it, re-analyse the same proposal into
+# something worse, and release on the authorisation the first result bought.
+# ---------------------------------------------------------------------------
+
+
+class TestQueueAuthorization(ConsumerCase):
+	"""FIX 1 — who may queue spending from existing treasury funds."""
+
+	def test_an_unauthorized_caller_cannot_queue_a_payout(self):
+		self.analyse((0, 0, 0, 0, 0))
+		fund_consumer(self.cm, self.c, GEN)
+		got = self.queue(sender=STRANGER, value=9)
+		self.assertEqual(got["status"], "REJECTED")
+		self.assertIn("neither", got["reason"])
+		self.assertEqual(got["refund_wei"], 9, "a refusal is not a confiscation")
+		self.assertEqual(len(self.c.payouts), 0, "nothing was recorded")
+		self.assertEqual(int(self.c.committed_wei), 0,
+		                 "no treasury money was committed")
+
+	def test_the_owner_may_always_queue(self):
+		self.analyse((0, 0, 0, 0, 0))
+		fund_consumer(self.cm, self.c, GEN)
+		self.assertTrue(self.c.can_queue(OWNER)["can_queue"])
+		self.assertTrue(self.c.can_queue(OWNER)["is_owner"])
+		self.assertEqual(self.queue(sender=OWNER)["status_code"], "OK")
+
+	def test_a_whitelisted_dao_address_may_queue(self):
+		self.analyse((0, 0, 0, 0, 0))
+		fund_consumer(self.cm, self.c, GEN)
+		who = self.c.can_queue(QUEUER)
+		self.assertTrue(who["can_queue"])
+		self.assertTrue(who["is_whitelisted"])
+		self.assertFalse(who["is_owner"])
+		self.assertEqual(self.queue(sender=QUEUER)["status_code"], "OK")
+
+	def test_a_revoked_queuer_cannot_queue_again(self):
+		self.analyse((0, 0, 0, 0, 0))
+		fund_consumer(self.cm, self.c, 2 * GEN)
+		self.assertEqual(self.queue(amount=GEN)["status_code"], "OK")
+		as_sender(OWNER, 0)
+		self.c.revoke_queuer(QUEUER)
+		self.assertFalse(self.c.can_queue(QUEUER)["can_queue"])
+		again = self.queue(amount=GEN, value=4)
+		self.assertEqual(again["status"], "REJECTED")
+		self.assertEqual(again["refund_wei"], 4)
+
+	def test_revoking_a_queuer_cannot_strand_a_payout_it_already_queued(self):
+		"""The owner must not gain a freeze lever out of the new role. A payout
+		that was authorised stays authorised, and release stays permissionless."""
+		out = self.analyse((0, 0, 0, 0, 0))
+		if out["verdict"] != "RECOMMEND":
+			self.skipTest("fixture did not reach RECOMMEND")
+		fund_consumer(self.cm, self.c, GEN)
+		q = self.queue()
+		as_sender(OWNER, 0)
+		revoked = self.c.revoke_queuer(QUEUER)
+		self.assertIn("stay releasable", revoked["applies_to"])
+		self.assertEqual(self.release(q, sender=STRANGER)["status_code"],
+		                 "RELEASED")
+		self.assertEqual(TRANSFERS[-1], (_Addr(PAYEE), GEN))
+
+	def test_the_whitelist_is_owner_only(self):
+		for who in (QUEUER, STRANGER):
+			as_sender(STRANGER, 0)
+			with self.assertRaises(self.cm.gl.vm.UserError):
+				self.c.authorize_queuer(who)
+			with self.assertRaises(self.cm.gl.vm.UserError):
+				self.c.revoke_queuer(who)
+
+	def test_the_whitelist_is_enumerable_and_never_lists_zero(self):
+		as_sender(OWNER, 0)
+		with self.assertRaises(self.cm.gl.vm.UserError):
+			self.c.authorize_queuer("0x" + "0" * 40)
+		self.c.authorize_queuer("0x" + "d" * 40)
+		listed = self.c.get_queuers()["authorized_queuers"]
+		self.assertEqual(sorted(listed), sorted([QUEUER, "0x" + "d" * 40]))
+		self.assertIn(QUEUER, self.c.get_terms()["authorized_queuers"])
+		as_sender(OWNER, 0)
+		self.c.revoke_queuer("0x" + "d" * 40)
+		self.assertEqual(self.c.get_queuers()["authorized_queuers"], [QUEUER])
+
+	def test_re_authorizing_never_grows_the_list_twice(self):
+		as_sender(OWNER, 0)
+		for _ in range(4):
+			self.c.authorize_queuer(QUEUER)
+		self.assertEqual(len(self.c.queuer_list), 1)
+		as_sender(OWNER, 0)
+		self.c.revoke_queuer(QUEUER)
+		self.c.authorize_queuer(QUEUER)
+		self.assertEqual(len(self.c.queuer_list), 1)
+		self.assertEqual(self.c.get_queuers()["count"], 1)
+
+	def test_an_authorized_queuer_gains_nothing_else(self):
+		"""The role grants the right to PROMISE money and nothing more."""
+		self.analyse((1, 1, 1, 1, 1))
+		fund_consumer(self.cm, self.c, 2 * GEN)
+		self.queue(amount=GEN)
+		as_sender(QUEUER, 0)
+		for call in (lambda: self.c.set_terms("RECOMMEND", 90, 3600),
+		             lambda: self.c.withdraw_uncommitted(GEN),
+		             lambda: self.c.transfer_ownership(QUEUER),
+		             lambda: self.c.authorize_queuer(STRANGER)):
+			as_sender(QUEUER, 0)
+			with self.assertRaises(self.cm.gl.vm.UserError):
+				call()
+
+
+class TestPaymentTermsAreBound(ConsumerCase):
+	"""FIX 2 — recipient, amount and purpose bound to the proposal ASSESSED."""
+
+	def test_queueing_with_the_correct_assessment_is_accepted_and_pinned(self):
+		out = self.analyse((0, 0, 0, 0, 0))
+		fund_consumer(self.cm, self.c, GEN)
+		q = self.queue(memo="Q3 grant to the working group")
+		self.assertEqual(q["status_code"], "OK")
+		auth = q["authorization"]
+		self.assertEqual(auth["assessment_id"], out["assessment_id"])
+		self.assertEqual(auth["evidence_digest"], out["content_hash"])
+		self.assertEqual(auth["proposal_key"], out["proposal_key"])
+		self.assertEqual(auth["recipient"], PAYEE)
+		self.assertEqual(auth["amount_wei"], GEN)
+		self.assertEqual(auth["purpose"], "Q3 grant to the working group")
+		self.assertEqual(auth["verdict_at_queue"], out["verdict"])
+		self.assertEqual(auth["score_at_queue"], out["overall_score"])
+		# and it survives a read-back, which is the only proof that matters
+		back = self.c.get_payout(q["payout_id"])
+		self.assertEqual(back["authorization"], auth)
+
+	def test_queueing_against_ANOTHER_proposals_assessment_is_rejected(self):
+		"""The reviewer's second finding, in one call: a good assessment of the
+		wrong proposal must not be able to authorise this payout."""
+		self.analyse((0, 0, 0, 0, 0))                      # the Snapshot one
+		self.clock.now += 2 * HOUR
+		other = run_analysis(MOD, self.oracle, FORUM_URL,
+		                     fixture="discourse_arbitrum", sender="0x" + "d" * 40)
+		fund_consumer(self.cm, self.c, GEN)
+		got = self.queue(assessment_id=other["assessment_id"], value=6)
+		self.assertEqual(got["status"], "REJECTED")
+		self.assertIn("different proposal", got["reason"])
+		self.assertEqual(got["refund_wei"], 6)
+		self.assertEqual(len(self.c.payouts), 0)
+
+	def test_queueing_against_an_unknown_assessment_id_is_rejected(self):
+		self.analyse((0, 0, 0, 0, 0))
+		fund_consumer(self.cm, self.c, GEN)
+		for bad in (99_999, -1, 12_345):
+			got = self.queue(assessment_id=bad, value=1)
+			self.assertEqual(got["status"], "REJECTED", bad)
+			self.assertEqual(got["refund_wei"], 1, bad)
+
+	def test_a_blank_purpose_cannot_be_bound(self):
+		self.analyse((0, 0, 0, 0, 0))
+		fund_consumer(self.cm, self.c, GEN)
+		for blank in ("", "   ", "\t\n"):
+			got = self.queue(memo=blank, value=2)
+			self.assertEqual(got["status"], "REJECTED", repr(blank))
+			self.assertIn("purpose", got["reason"])
+
+	def test_release_refuses_a_recipient_the_payout_does_not_name(self):
+		out = self.analyse((0, 0, 0, 0, 0))
+		if out["verdict"] != "RECOMMEND":
+			self.skipTest("fixture did not reach RECOMMEND")
+		fund_consumer(self.cm, self.c, GEN)
+		q = self.queue()
+		before = len(TRANSFERS)
+		with self.assertRaises(self.cm.gl.vm.UserError) as ctx:
+			self.release(q, recipient="0x" + "5" * 40)
+		self.assertIn("payment terms do not match",
+		              str(getattr(ctx.exception, "message", ctx.exception)))
+		self.assertEqual(len(TRANSFERS), before, "no money moved")
+		self.assertEqual(self.c.get_payout(q["payout_id"])["status"], "QUEUED")
+
+	def test_release_refuses_an_amount_the_payout_does_not_name(self):
+		out = self.analyse((0, 0, 0, 0, 0))
+		if out["verdict"] != "RECOMMEND":
+			self.skipTest("fixture did not reach RECOMMEND")
+		fund_consumer(self.cm, self.c, GEN)
+		q = self.queue(amount=GEN)
+		before = len(TRANSFERS)
+		for wrong in (GEN - 1, GEN + 1, 0, -GEN):
+			with self.assertRaises(self.cm.gl.vm.UserError) as ctx:
+				self.release(q, amount=wrong)
+			self.assertIn("payment terms do not match",
+			              str(getattr(ctx.exception, "message", ctx.exception)))
+		self.assertEqual(len(TRANSFERS), before)
+		self.assertEqual(int(self.c.committed_wei), GEN)
+
+	def test_release_refuses_an_assessment_the_payout_was_not_authorized_by(self):
+		out = self.analyse((0, 0, 0, 0, 0))
+		if out["verdict"] != "RECOMMEND":
+			self.skipTest("fixture did not reach RECOMMEND")
+		fund_consumer(self.cm, self.c, GEN)
+		q = self.queue()
+		with self.assertRaises(self.cm.gl.vm.UserError) as ctx:
+			self.release(q, assessment_id=out["assessment_id"] + 1)
+		self.assertIn("authorised by assessment",
+		              str(getattr(ctx.exception, "message", ctx.exception)))
+
+	def test_release_on_the_stated_terms_succeeds(self):
+		out = self.analyse((0, 0, 0, 0, 0))
+		if out["verdict"] != "RECOMMEND":
+			self.skipTest("fixture did not reach RECOMMEND")
+		fund_consumer(self.cm, self.c, GEN)
+		q = self.queue()
+		rel = self.release(q)
+		self.assertEqual(rel["status_code"], "RELEASED")
+		self.assertEqual(rel["settled_assessment_id"], out["assessment_id"])
+		self.assertEqual(rel["authorization"]["assessment_id"],
+		                 out["assessment_id"])
+		self.assertEqual(TRANSFERS[-1], (_Addr(PAYEE), GEN))
+
+
+class TestAssessmentIsPinned(ConsumerCase):
+	"""FIX 3 — the evidence digest is pinned, so a later re-analysis cannot
+	change an authorisation that has already been granted."""
+
+	def recommended_payout(self):
+		out = self.analyse((0, 0, 0, 0, 0))
+		if out["verdict"] != "RECOMMEND":
+			self.skipTest("fixture did not reach RECOMMEND")
+		fund_consumer(self.cm, self.c, GEN)
+		return out, self.queue()
+
+	def test_the_digest_pinned_at_queue_time_is_the_oracles_content_hash(self):
+		out, q = self.recommended_payout()
+		self.assertNotEqual(out["content_hash"], "")
+		self.assertEqual(q["evidence_digest"], out["content_hash"])
+		pre = self.c.preflight_payout(q["payout_id"])
+		self.assertTrue(pre["evidence_unchanged"])
+		self.assertEqual(pre["current_evidence_digest"], out["content_hash"])
+
+	def test_a_re_analysis_with_a_DIFFERENT_result_blocks_the_release(self):
+		"""THE REPLAY, refused. analyse -> queue -> re-analyse worse ->
+		release must not settle on the authorisation the first result bought."""
+		out, q = self.recommended_payout()
+		again = self.reanalyse((3, 3, 3, 3, 3))
+		if again["content_hash"] == out["content_hash"]:
+			self.skipTest("the re-analysis produced identical evidence")
+		self.assertNotEqual(again["assessment_id"], out["assessment_id"])
+
+		pre = self.c.preflight_payout(q["payout_id"])
+		self.assertFalse(pre["would_release"])
+		self.assertFalse(pre["evidence_unchanged"])
+		self.assertEqual(pre["pinned_evidence_digest"], out["content_hash"])
+		self.assertEqual(pre["current_evidence_digest"], again["content_hash"])
+		self.assertIn("re-analysed", pre["blocker"])
+
+		before = len(TRANSFERS)
+		with self.assertRaises(self.cm.gl.vm.UserError) as ctx:
+			self.release(q)
+		msg = str(getattr(ctx.exception, "message", ctx.exception))
+		self.assertIn("different evidence digest", msg)
+		self.assertEqual(len(TRANSFERS), before, "no money moved")
+		self.assertEqual(self.c.get_payout(q["payout_id"])["status"], "QUEUED")
+
+	def test_the_replay_is_blocked_even_when_the_NEW_analysis_still_recommends(self):
+		"""Not a verdict check wearing a digest's clothes. The authorisation is
+		for ONE assessment of one evidence vector; a second analysis that also
+		says RECOMMEND is still a different authorisation the treasury never
+		granted, and the payout has to be re-queued against it."""
+		out, q = self.recommended_payout()
+		again = self.reanalyse((0, 1, 0, 0, 0))
+		if again["content_hash"] == out["content_hash"]:
+			self.skipTest("the re-analysis produced identical evidence")
+		if again["verdict"] != "RECOMMEND":
+			self.skipTest("the re-analysis did not stay at RECOMMEND")
+		with self.assertRaises(self.cm.gl.vm.UserError) as ctx:
+			self.release(q)
+		self.assertIn("different evidence digest",
+		              str(getattr(ctx.exception, "message", ctx.exception)))
+
+	def test_a_re_analysis_onto_the_SAME_evidence_still_releases(self):
+		"""The digest is the authority, not the id. Re-running the analysis and
+		landing on the identical feature vector has changed nothing about what
+		was authorised, and refusing there would be a liveness bug dressed up
+		as a safety one."""
+		out, q = self.recommended_payout()
+		again = self.reanalyse((0, 0, 0, 0, 0))
+		if again["content_hash"] != out["content_hash"]:
+			self.skipTest("the re-analysis moved the evidence digest")
+		self.assertNotEqual(again["assessment_id"], out["assessment_id"])
+		pre = self.c.preflight_payout(q["payout_id"])
+		self.assertTrue(pre["evidence_unchanged"])
+		self.assertEqual(self.release(q)["status_code"], "RELEASED")
+		self.assertEqual(TRANSFERS[-1], (_Addr(PAYEE), GEN))
+
+	def test_a_re_queue_against_the_new_assessment_releases(self):
+		"""The escape hatch is a NEW authorisation, granted deliberately by
+		somebody who may grant one — not a release on the old one."""
+		out, q = self.recommended_payout()
+		again = self.reanalyse((0, 1, 0, 0, 0))
+		if again["content_hash"] == out["content_hash"]:
+			self.skipTest("the re-analysis produced identical evidence")
+		if again["verdict"] != "RECOMMEND":
+			self.skipTest("the re-analysis did not stay at RECOMMEND")
+		as_sender(QUEUER, 0)
+		self.c.cancel_payout(q["payout_id"])
+		q2 = self.queue(assessment_id=again["assessment_id"])
+		self.assertEqual(q2["status_code"], "OK")
+		self.assertEqual(q2["evidence_digest"], again["content_hash"])
+		self.assertEqual(self.release(q2)["status_code"], "RELEASED")
+
+	def test_a_stranded_payout_can_still_be_cancelled(self):
+		"""Pinning must not become a way to lock treasury funds forever. If a
+		re-analysis strands a payout, the commitment is still recoverable."""
+		out, q = self.recommended_payout()
+		again = self.reanalyse((3, 3, 3, 3, 3))
+		if again["content_hash"] == out["content_hash"]:
+			self.skipTest("the re-analysis produced identical evidence")
+		self.assertEqual(int(self.c.committed_wei), GEN)
+		with self.assertRaises(self.cm.gl.vm.UserError):
+			self.release(q)
+		as_sender(OWNER, 0)
+		self.c.cancel_payout(q["payout_id"])
+		self.assertEqual(int(self.c.committed_wei), 0)
+		as_sender(OWNER, 0)
+		self.assertEqual(self.c.withdraw_uncommitted(GEN)["withdrawn_wei"], GEN)
+
+	def test_the_pinned_digest_is_read_by_ID_not_by_url(self):
+		"""If release re-derived the assessment from the URL it would read the
+		LATEST one every time, which is the bug. The record has to carry the id
+		and the digest, and release has to use both."""
+		src = CONSUMER.read_text()
+		tree = ast.parse(src)
+		fn = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)
+		      and n.name == "_settle_check"]
+		self.assertEqual(len(fn), 1, "release's checks live in one place")
+		calls = [n.func.attr for n in ast.walk(fn[0])
+		         if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)]
+		self.assertIn("_assessment", calls, "it reads the record BY ID")
+		names = {n.attr for n in ast.walk(fn[0]) if isinstance(n, ast.Attribute)}
+		self.assertIn("evidence_digest", names)
+		self.assertIn("assessment_id", names)
+
+	def test_preflight_payout_and_release_cannot_drift(self):
+		"""Both go through _settle_check and nothing else, for the same reason
+		preflight and release both go through _accepts."""
+		tree = ast.parse(CONSUMER.read_text())
+		for name in ("release", "preflight_payout"):
+			fn = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)
+			      and n.name == name][0]
+			calls = [c.func.attr for c in ast.walk(fn)
+			         if isinstance(c, ast.Call)
+			         and isinstance(c.func, ast.Attribute)]
+			self.assertIn("_settle_check", calls, name)
+			self.assertNotIn("_accepts", calls,
+			                 name + " must not re-implement the rule")
+
+
+# ---------------------------------------------------------------------------
+# 14. The reviewer's EARLIER findings, kept as standing regressions
+#
+# Every one of these was a real finding on an earlier project, and each is the
+# kind of bug that comes back when a file is edited by someone who was not in
+# the review. They are checked here so a future change has to break a named
+# test rather than quietly re-open a closed finding.
+# ---------------------------------------------------------------------------
+
+COUNTER_FIELDS = ("total_queued", "total_released_wei", "total_analyzed",
+                  "total_fees_wei", "refunds_owed", "committed_wei",
+                  "balance_wei", "analysis_count", "analyses")
+
+
+class TestReviewerRegressions(unittest.TestCase):
+
+	def _sources(self):
+		out = [SOURCE, CONSUMER]
+		for art in (ARTIFACT, CONSUMER_ARTIFACT):
+			if art.exists():
+				out.append(art)
+		return out
+
+	def test_no_counter_is_incremented_before_a_revert(self):
+		"""NO COUNTER BEFORE A REVERT. A tally written on the way to a raise is
+		rolled back with it, so it reads zero forever while looking like it
+		counted — and the next reader believes the number."""
+		bad = []
+		for path in self._sources():
+			names = json.loads((ROOT / "build" / (path.stem.split(".")[0]
+			                    + ".names.json")).read_text()) \
+				if path.name.endswith(".min.py") else {}
+			fields = set(COUNTER_FIELDS) | {names.get(f, f)
+			                                for f in COUNTER_FIELDS}
+			for fn in ast.walk(ast.parse(path.read_text())):
+				if not isinstance(fn, ast.FunctionDef):
+					continue
+				raises = [n.lineno for n in ast.walk(fn)
+				          if isinstance(n, ast.Raise)]
+				if not raises:
+					continue
+				last_raise = max(raises)
+				for n in ast.walk(fn):
+					if (isinstance(n, ast.Attribute)
+							and isinstance(n.ctx, ast.Store)
+							and n.attr in fields and n.lineno < last_raise):
+						bad.append(f"{path.name}:{fn.name}:{n.lineno} "
+						           f"writes {n.attr} before a raise at "
+						           f"{last_raise}")
+		self.assertEqual(bad, [])
+
+	def test_the_fee_charged_is_the_fee_that_was_in_force(self):
+		"""FEE SNAPSHOTTED. The fee is read once per call and moving it
+		afterwards cannot reach an assessment that already settled."""
+		c, clock = build(MOD)
+		as_sender("0x" + "a" * 40, 0)
+		c.set_fee(GEN // 100)
+		out = run_analysis(MOD, c, SNAP_URL, value=GEN // 100)
+		self.assertEqual(out["status"], "OK")
+		self.assertEqual(int(c.total_fees_wei), GEN // 100)
+		as_sender("0x" + "a" * 40, 0)
+		c.set_fee(MOD.MAX_FEE_WEI)
+		self.assertEqual(int(c.total_fees_wei), GEN // 100,
+		                 "raising the fee re-priced a completed assessment")
+
+	def test_overpayment_is_credited_not_kept(self):
+		"""The other half of the same finding: the fee in force is charged and
+		not one wei more, whatever the caller attached."""
+		c, clock = build(MOD)
+		as_sender("0x" + "a" * 40, 0)
+		c.set_fee(GEN // 100)
+		out = run_analysis(MOD, c, SNAP_URL, value=GEN)
+		self.assertEqual(out["status"], "OK")
+		self.assertEqual(int(c.total_fees_wei), GEN // 100)
+		self.assertEqual(c.refund_of("0x" + "b" * 40)["refund_wei"],
+		                 GEN - GEN // 100)
+
+	def test_every_payable_path_refunds_rather_than_raising(self):
+		"""REFUND ON REJECT. A payable method that raises keeps the value in
+		the reverted transaction's shadow and tells the caller nothing; every
+		payable path in both contracts returns instead, and every refusal
+		credits the sender."""
+		for path in self._sources():
+			tree = ast.parse(path.read_text())
+			payable = [n for n in ast.walk(tree)
+			           if isinstance(n, ast.FunctionDef)
+			           and any(isinstance(d, ast.Attribute)
+			                   and d.attr == "payable"
+			                   for d in n.decorator_list)]
+			self.assertGreaterEqual(len(payable), 1, path.name)
+			for fn in payable:
+				self.assertEqual([n.lineno for n in ast.walk(fn)
+				                  if isinstance(n, ast.Raise)], [],
+				                 f"{path.name}:{fn.name}")
+
+	def test_the_owner_cannot_freeze_funds_in_either_contract(self):
+		"""OWNER CANNOT FREEZE. Not on the oracle: a pause still lets a refund
+		be claimed. Not on the treasury: committed money is out of the owner's
+		reach, release is permissionless, and an owed refund is claimable by
+		the party owed it and by nobody else."""
+		# the oracle: paused, and the refund still comes out
+		c, clock = build(MOD)
+		as_sender("0x" + "a" * 40, 0)
+		c.set_fee(GEN // 100)
+		run_analysis(MOD, c, SNAP_URL, value=GEN)
+		as_sender("0x" + "a" * 40, 0)
+		c.set_paused(True)
+		as_sender("0x" + "b" * 40, 0)
+		self.assertEqual(c.claim_refund()["status"], "OK")
+
+		# the treasury: the owner cannot reach a commitment, cannot block a
+		# release, and cannot reach a refund owed to somebody else
+		oracle, con, clock2, cm = build_pair()
+		con._now = lambda: clock2.now
+		as_sender(OWNER, 0)
+		con.authorize_queuer(QUEUER)
+		out = run_analysis(MOD, oracle, SNAP_URL, levels=(0, 0, 0, 0, 0),
+		                   sender=QUEUER)
+		try:
+			if out["verdict"] != "RECOMMEND":
+				self.skipTest("fixture did not reach RECOMMEND")
+			as_sender(OWNER, GEN)
+			con.fund()
+			as_sender(QUEUER, 0)
+			q = con.queue_payout(SNAP_URL, "grant", PAYEE, GEN,
+			                     out["assessment_id"])
+			as_sender(OWNER, 0)
+			with self.assertRaises(cm.gl.vm.UserError):
+				con.withdraw_uncommitted(1)
+			as_sender(STRANGER, 0)
+			self.assertEqual(
+				con.release(q["payout_id"], PAYEE, GEN,
+				            out["assessment_id"])["status_code"], "RELEASED")
+		finally:
+			ORACLE["impl"] = None
+
+	def test_no_owner_gated_treasury_method_moves_a_committed_wei(self):
+		tree = ast.parse(CONSUMER.read_text())
+		forbidden = {"committed_wei", "refund_wei", "refunds_owed", "payouts",
+		             "evidence_digest", "assessment_id", "queuers"}
+		bad = []
+		for fn in ast.walk(tree):
+			if not isinstance(fn, ast.FunctionDef):
+				continue
+			calls = {c.func.attr for c in ast.walk(fn)
+			         if isinstance(c, ast.Call)
+			         and isinstance(c.func, ast.Attribute)}
+			if "_only_owner" not in calls:
+				continue
+			for n in ast.walk(fn):
+				if (isinstance(n, ast.Attribute) and isinstance(n.ctx, ast.Store)
+						and n.attr in forbidden):
+					bad.append(f"{fn.name} writes {n.attr}")
+				if (isinstance(n, ast.Subscript) and isinstance(n.ctx, ast.Store)
+						and isinstance(n.value, ast.Attribute)
+						and n.value.attr in ("refund_wei", "payouts")):
+					bad.append(f"{fn.name} writes into {n.value.attr}")
+		self.assertEqual(bad, [])
 
 
 if __name__ == "__main__":

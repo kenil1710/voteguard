@@ -94,6 +94,33 @@ with no setter**, and every payout **snapshots** the verdict mode, score floor
 and staleness window it was queued under — so moving the defaults can never
 reach money already promised.
 
+Spending it is authorised, and the authorisation is bound to one assessment:
+
+```python
+authorize_queuer(dao)                              # owner only
+queue_payout(url, purpose, recipient, wei, id)     # owner or a whitelisted DAO
+release(payout_id, recipient, wei, id)             # anyone — but state the terms
+```
+
+* **Only the owner or a whitelisted address may queue.** Queueing commits
+  existing treasury funds, so it is permissioned. `release` is deliberately not:
+  a treasury whose owner can sit on a payout the oracle already approved has
+  moved the discretion somewhere less visible, not removed it.
+* **Recipient, amount and purpose are bound to the proposal actually assessed.**
+  The named `assessment_id` is fetched across the boundary and its proposal key
+  compared with the submitted URL's before anything is recorded. A good
+  assessment of the wrong proposal authorises nothing.
+* **The evidence digest is pinned at queue time.** VoteGuard's `content_hash` is
+  copied into the record, and `release` refuses unless the assessment governing
+  that proposal still hashes to it — so *analyse → queue → re-analyse → release
+  on the stale authorisation* fails, **even when the re-analysis also says
+  RECOMMEND**. A re-run landing on identical evidence changes nothing and still
+  releases; anything else needs a fresh queue against the assessment that holds.
+
+`preflight_payout(id)` reports exactly what `release` would do, for free and
+without reverting. A payout stranded by a re-analysis is never frozen —
+`cancel_payout` still frees the commitment.
+
 ---
 
 ## Verification

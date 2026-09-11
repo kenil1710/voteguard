@@ -405,9 +405,18 @@ if (!treasury) {
     check("the treasury accepts funding", funded.ok,
       String(funded.revertReason ?? "").slice(0, 70));
 
-    // Queue a payout against the real proposal and try to release it.
+    // Queueing is PERMISSIONED now, and the signer is the deployer/owner, so
+    // it may queue. A stranger must not be able to.
+    const canOwner = await treasury.call("can_queue", [terms?.owner ?? ""]);
+    check("the owner may queue", canOwner?.can_queue === true);
+    const canStranger = await treasury.call("can_queue", ["0x000000000000000000000000000000000000dEaD"]);
+    check("an address nobody whitelisted may NOT queue", canStranger?.can_queue === false);
+
+    // Queue a payout BOUND to the assessment that was actually made, and try
+    // to release it. A payout can no longer be queued without naming one.
     const q = await treasury.send("queue_payout",
-      [AAVE, "grant to the Aave working group", "0x000000000000000000000000000000000000dEaD", 1000], 0n);
+      [AAVE, "grant to the Aave working group", "0x000000000000000000000000000000000000dEaD", 1000,
+       aave.assessment_id], 0n);
     // The payout id is read back from the contract rather than out of the
     // return value, because the return spelling varies by network.
     const list = await treasury.call("get_payouts", [0, 20]);
@@ -421,6 +430,34 @@ if (!treasury) {
       const stored = await treasury.call("get_payout", [id]);
       check("the payout snapshotted its oracle",
         String(stored?.terms?.oracle ?? "").toLowerCase() === VOTEGUARD.toLowerCase());
+      check("the payout bound recipient, amount and purpose to the assessment",
+        Number(stored?.authorization?.assessment_id) === Number(aave.assessment_id)
+        && String(stored?.authorization?.recipient ?? "").toLowerCase() === "0x000000000000000000000000000000000000dead"
+        && Number(stored?.authorization?.amount_wei) === 1000
+        && String(stored?.authorization?.purpose ?? "").length > 0,
+        JSON.stringify(stored?.authorization ?? {}).slice(0, 120));
+      check("the payout PINNED the assessment's evidence digest",
+        String(stored?.authorization?.evidence_digest ?? "") === String(aave.content_hash ?? "x"),
+        `${stored?.authorization?.evidence_digest} vs ${aave.content_hash}`);
+
+      // A caller that states the wrong terms gets a revert, not a transfer.
+      const wrongPayee = await stranger.send("release",
+        [id, "0x000000000000000000000000000000000000bEEF", 1000, aave.assessment_id], 0n);
+      check("release REVERTS on a recipient the payout does not name",
+        wrongPayee.reverted || !wrongPayee.ok,
+        String(wrongPayee.revertReason ?? "").slice(0, 90));
+      const wrongAmount = await stranger.send("release", [id, "0x000000000000000000000000000000000000dEaD", 999, aave.assessment_id], 0n);
+      check("release REVERTS on an amount the payout does not name",
+        wrongAmount.reverted || !wrongAmount.ok,
+        String(wrongAmount.revertReason ?? "").slice(0, 90));
+      const wrongAssessment = await stranger.send("release",
+        [id, "0x000000000000000000000000000000000000dEaD", 1000, Number(aave.assessment_id) + 1], 0n);
+      check("release REVERTS on an assessment the payout was not authorised by",
+        wrongAssessment.reverted || !wrongAssessment.ok,
+        String(wrongAssessment.revertReason ?? "").slice(0, 90));
+      const stillQueued = await treasury.call("get_payout", [id]);
+      check("three refused releases moved no money", stillQueued?.status === "QUEUED",
+        String(stillQueued?.status));
       check("the payout snapshotted its verdict mode and score floor",
         stored?.terms?.mode === terms?.mode && stored?.terms?.min_score === terms?.min_score,
         `${stored?.terms?.mode} / ${stored?.terms?.min_score}`);
@@ -434,8 +471,17 @@ if (!treasury) {
         after?.terms?.mode === stored?.terms?.mode && after?.terms?.min_score === stored?.terms?.min_score,
         `still ${after?.terms?.mode} / ${after?.terms?.min_score}`);
 
-      // The release itself: permissionless, and it either pays or reverts.
-      const rel = await stranger.send("release", [id], 0n);
+      // The free preview of exactly what release will do, authorisation
+      // checks included.
+      const payPre = await treasury.call("preflight_payout", [id]);
+      check("preflight_payout reports the pinned digest is unchanged",
+        payPre?.evidence_unchanged === true,
+        `${payPre?.pinned_evidence_digest} / ${payPre?.current_evidence_digest}`);
+
+      // The release itself: permissionless, stating the bound terms, and it
+      // either pays or reverts.
+      const rel = await stranger.send("release",
+        [id, "0x000000000000000000000000000000000000dEaD", 1000, aave.assessment_id], 0n);
       if (shouldRelease) {
         check("a stranger can release a recommended payout", rel.ok,
           String(rel.revertReason ?? "").slice(0, 80));
@@ -468,6 +514,15 @@ if (!treasury) {
         String(strict?.error ?? "").slice(0, 90));
     }
   }
+
+  // Binding moved the refusal forward: an unanalysed proposal cannot even be
+  // queued now, where it used to queue and fail later at release.
+  const noAssessment = await treasury.send("queue_payout",
+    [UNISWAP, "grant", "0x000000000000000000000000000000000000dEaD", 1000, 999999], 0n);
+  check("a payout cannot be queued against an assessment that does not exist",
+    !noAssessment.ok || noAssessment.reverted
+    || String(noAssessment.returnValue?.status ?? "") === "REJECTED",
+    String(noAssessment.revertReason ?? JSON.stringify(noAssessment.returnValue ?? {})).slice(0, 90));
 
   const unknownPre = await treasury.call("preflight", [UNISWAP]);
   check("an unanalysed proposal would never release",
